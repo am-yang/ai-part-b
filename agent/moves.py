@@ -206,3 +206,10 @@ def apply_move(
         new_board = {coord: player for coord, player in new_board.items() if coord.c != column}
 
     return new_board
+
+def is_terminal_state(state: dict[Coord, PlayerColor], num_moves: int) -> bool:
+    # First, if moves exceed 150, we reach a tie
+    if num_moves >= 150:
+        return True
+
+    
