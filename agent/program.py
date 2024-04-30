@@ -58,9 +58,6 @@ class Agent:
 
         self.board[c1] = self.board[c2] = self.board[c3] = self.board[c4] = color
         self.total_moves += 1
-        if (self.is_terminal_state(state=self.board, num_moves=self.total_moves)):
-            return
-
 
     # Additional helper functions defined below
         
