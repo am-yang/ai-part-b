@@ -49,7 +49,7 @@ def minimax_decision(
     init_children(root_node)  # Generate possible moves and resulting states
 
     for child in root_node.children:
-        value = minimax_value(child, root_player_color) #🛑 Fix to pass in root player colour here 
+        value = minimax_value(child, root_player_color) 
         if value > max_val:
             max_val = value
             best_action = child.parent_action # child.parent_action is the operator used to generate this child
@@ -62,11 +62,9 @@ def minimax_value(node: MiniMaxNode, root_player_color: PlayerColor) -> int:
 
     init_children(node)
     
-    if node.color == root_player_color: # ❓ Question: How do we keep track of the initial state node color? 
-        node.depth += 1  
+    if node.color == root_player_color: 
         return max(minimax_value(child, root_player_color) for child in node.children)
     else:
-        node.depth += 1 
         return min(minimax_value(child, root_player_color) for child in node.children)
     
 def utility(node: MiniMaxNode, root_player_color: PlayerColor, depth: int) -> int:

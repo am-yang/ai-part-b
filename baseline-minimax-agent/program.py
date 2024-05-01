@@ -37,6 +37,7 @@ class Agent:
 
         place_action: PlaceAction = action
         self.board = apply_move(self.board, place_action, self._color)
+        self.total_moves += 1
 
 
     # Additional helper functions defined below
