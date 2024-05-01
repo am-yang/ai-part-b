@@ -4,6 +4,7 @@
 from referee.game import PlayerColor, PlaceAction, Coord, Direction
 from referee.game.constants import BOARD_N 
 from referee.game.coord import Vector2
+from random import randint, choice
 
 TETROMINOES = [
         # I shape
@@ -118,7 +119,6 @@ FIRST_MOVES = 2
 
 def all_possible_moves(
     board: dict[Coord, PlayerColor],
-    depth: int,
     color: PlayerColor
 ) -> list[PlaceAction]:
     '''
@@ -127,16 +127,11 @@ def all_possible_moves(
         
     actions: list[PlaceAction] = []
 
-    is_first_moves = depth <= FIRST_MOVES
-
     # Traverse empty cells ADJACENT to a red cell
     for row in range(int(BOARD_N)):
         for column in range(int(BOARD_N)):
             curr_cell = Coord(row, column)
             # First moves can be anywhere (not constrained to adjacent tile)
-            if is_first_moves:
-                actions += generate_tetrominoes(curr_cell, board)
-                continue
             if board.get(curr_cell) == color:
                 # Generating all adjacent cells to the red cell
                 left = curr_cell.__add__(Direction.Left)
@@ -226,9 +221,6 @@ def is_terminal_state(
     if depth == MAX_DEPTH:
         return True
     
-    if depth <= FIRST_MOVES:
-        return False
-    
     # Traverse empty cells ADJACENT to a red cell
     for row in range(int(BOARD_N)):
         for column in range(int(BOARD_N)):
@@ -285,3 +277,28 @@ def count_colors(
             count += 1
     
     return count
+
+
+def generate_random_action(board: dict[Coord, PlayerColor]) -> PlaceAction:
+    
+    x = randint(0, 9)
+    y = randint(0, 9)
+    coord = Coord(x, y)
+
+    relative_positions = choice(TETROMINOES)
+
+    temp: list[Coord] = []
+
+    for position in relative_positions:
+        tetromino_cell = coord.__add__(position)
+        temp.append(tetromino_cell)
+
+    # First check if a coordinate is already occupied on cell. if it is, then shift the entire tetromino to the left 4 cells
+    if (temp[0] in board) or (temp[1] in board) or (temp[2] in board) or (temp[3] in board):
+        for i in range(CELLS):
+            temp[0] = temp[0].__add__(Vector2(0,1))
+            temp[1] = temp[1].__add__(Vector2(0,1))
+            temp[2] = temp[2].__add__(Vector2(0,1))
+            temp[3] = temp[3].__add__(Vector2(0,1))
+
+    return PlaceAction(temp[0], temp[1], temp[2], temp[3])
