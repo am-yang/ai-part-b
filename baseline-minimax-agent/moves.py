@@ -114,9 +114,12 @@ PATH_COST = 1
 ROW = 'r'
 COLUMN = 'c'
 MAX_DEPTH = 150
+FIRST_MOVES = 2
 
 def all_possible_moves(
-    board: dict[Coord, PlayerColor]
+    board: dict[Coord, PlayerColor],
+    depth: int,
+    color: PlayerColor
 ) -> list[PlaceAction]:
     '''
     Function to compute list of next possible actions from current state
@@ -124,11 +127,17 @@ def all_possible_moves(
         
     actions: list[PlaceAction] = []
 
+    is_first_moves = depth <= FIRST_MOVES
+
     # Traverse empty cells ADJACENT to a red cell
     for row in range(int(BOARD_N)):
         for column in range(int(BOARD_N)):
             curr_cell = Coord(row, column)
-            if board.get(curr_cell) == PlayerColor.RED:
+            # First moves can be anywhere (not constrained to adjacent tile)
+            if is_first_moves:
+                actions += generate_tetrominoes(curr_cell, board)
+                continue
+            if board.get(curr_cell) == color:
                 # Generating all adjacent cells to the red cell
                 left = curr_cell.__add__(Direction.Left)
                 right = curr_cell.__add__(Direction.Right)
@@ -175,14 +184,15 @@ def generate_tetrominoes(
 
 def apply_move(
     board: dict[Coord, PlayerColor],
-    move: PlaceAction
+    move: PlaceAction,
+    player: PlayerColor
 ) -> dict[Coord, PlayerColor]: 
     '''
     Helper function to update board with new action, and clear rows/columns if necessary
     '''
     new_board = {key: value for key, value in board.items()}
 
-    new_board[move.c1] = new_board[move.c2] = new_board[move.c3] = new_board[move.c4] = PlayerColor.RED
+    new_board[move.c1] = new_board[move.c2] = new_board[move.c3] = new_board[move.c4] = player
     count_row = 0
     count_column = 0
     clear_rows = []
@@ -210,15 +220,20 @@ def apply_move(
 
 def is_terminal_state(
     board: dict[Coord, PlayerColor],
+    color: PlayerColor,
     depth: int
 ) -> bool:
     if depth == MAX_DEPTH:
         return True
+    
+    if depth <= FIRST_MOVES:
+        return False
+    
     # Traverse empty cells ADJACENT to a red cell
     for row in range(int(BOARD_N)):
         for column in range(int(BOARD_N)):
             curr_cell = Coord(row, column)
-            if board.get(curr_cell) == PlayerColor.RED:
+            if board.get(curr_cell) == color:
                 # Generating all adjacent cells to the red cell
                 left = curr_cell.__add__(Direction.Left)
                 right = curr_cell.__add__(Direction.Right)
@@ -237,7 +252,6 @@ def is_terminal_state(
                 if down not in board:
                     if moves_on_cell(down, board):
                         return False
-    
     return True
 
 def moves_on_cell(
@@ -260,6 +274,7 @@ def moves_on_cell(
 
     return False
 
+
 def count_colors(
     board: dict[Coord, PlayerColor],
     color: PlayerColor
@@ -268,6 +283,5 @@ def count_colors(
     for key in board:
         if board[key] == color:
             count += 1
-
+    
     return count
-
