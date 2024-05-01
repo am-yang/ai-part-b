@@ -63,28 +63,27 @@ def simulation(
     curr_player = node.color # also keep track of whose turn it is
     self_won = False
 
-    while not is_terminal_state(board, node.color, depth):
-        print(render(board, use_color=True))
-        print("depth: " + str(depth) + ", color: " + str(curr_player))
-
+    while not is_terminal_state(board, curr_player, depth):
+        
         # Alternate turns
         curr_player = PlayerColor.BLUE if curr_player == PlayerColor.RED else PlayerColor.RED
         depth += 1
         possible_actions = all_possible_moves(board, depth, curr_player)
 
         random_action = random.choice(possible_actions)
-
+        # print("depth: " + str(depth) + ", color: " + str(curr_player))
         board = apply_move(board, random_action, curr_player)
+        # print(render(board, use_color=True))
 
     
     # Check who won the simulation 
     if depth == 150:
-        count = count_colors(node.color)
+        count = count_colors(node.color) 
         if count > 75:
             self_won = True
     else:
-        # if the game ended on a player's turn (i.e., before they could make another move), then the opponent wins
-        if curr_player != node.color:
+        # Player that got the last move in wins the simulation
+        if curr_player == node.color:
             self_won = True
 
     if self_won:
@@ -97,8 +96,15 @@ def simulation(
 def selection(
     node: MCTSNode
 ) -> MCTSNode:
+
+    # If we are at the root
+    if not node.parent:
+        init_children(node)
+        # return a random child to perform expansion
+        return random.choice(node.children)
+    
+    # Keep traversing down tree until we reach leaf 
     curr_node = node
-    # Keep traversing down tree until we reach leaf
     while curr_node.children:
         children = curr_node.children
         max_child = children[0] 
@@ -112,6 +118,12 @@ def selection(
 
         # Path to child chosen
         curr_node = max_child
+    
+    if curr_node.num_visits > 0:
+        init_children(curr_node)
+        if curr_node.children:
+            return random.choice(curr_node.children)
+        
     return curr_node
 
 def expansion(
@@ -122,10 +134,9 @@ def expansion(
     '''
     if not node.children:
         init_children(node)
-    
-    child = random.choice(node.children)
+        return random.choice(node.children)
 
-    return child
+    return node
 
 
 def backpropagate(
