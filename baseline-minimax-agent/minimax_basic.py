@@ -1,6 +1,8 @@
 from .moves import all_possible_moves, is_terminal_state, apply_move, count_colors
 from referee.game import PlayerColor, Coord, PlaceAction
 
+root_player_color = PlayerColor.RED # 🛑 Where are we passing in the initial node colour? 
+
 class MiniMaxNode:
 
     def __init__(self, color: PlayerColor, state: dict[Coord, PlayerColor], depth: int, parent=None, parent_action=None):
@@ -43,16 +45,16 @@ def minimax_decision(node):
     init_children(node)  # Generate possible moves and resulting states
 
     for child in node.children:
-        value = minimax_value(child, child.color)
+        value = minimax_value(child, root_player_color) #🛑 Fix to pass in root player colour here 
         if value > max_val:
             max_val = value
             best_action = child.parent_action # child.parent_action is the operator used to generate this child
 
     return best_action
 
-def minimax_value(node, current_player): #Passing in depth as parameter 
+def minimax_value(node, root_player_color): 
     if is_terminal_state(node.state): # ❓ Question: If the depth is already counted in terminal state function, how should we incorporate 150 turns 
-        return utility(node, current_player)
+        return utility(node, root_player_color)
     
     # Check the case where the game ends at 150 turns 
     if node.depth == 150:
@@ -64,16 +66,18 @@ def minimax_value(node, current_player): #Passing in depth as parameter
     else: 
         return -1
 
-    if current_player == node.color: # ❓ Question: How do we keep track of the initial state node colour? 
+    init_children(node)
+    
+    if node.color == root_player_color: # ❓ Question: How do we keep track of the initial state node color? 
         depth += 1  
-        return max(minimax_value(child, node.color) for child in node.children)
+        return max(minimax_value(child, root_player_color) for child in node.children)
     else:
         depth += 1 
-        return min(minimax_value(child, node.color) for child in node.children)
+        return min(minimax_value(child, root_player_color) for child in node.children)
     
-def utility(node, current_player):
-    #❓ Question: How do we keep track of the initial state node colour? 
-    if current_player != node.color : # Stopping at minimizer's turn - Opponent has no more moves to make, we win
+def utility(node, root_player_color):
+    #❓ Question: How do we keep track of the initial state node color? 
+    if node.color != root_player_color: # Stopping at minimizer's turn - Opponent has no more moves to make, we win
         return 1
-    if current_player == node.color: # Stopping at maximizer's turn - We have no more moves to make, we lose
+    else: # Stopping at maximizer's turn - We have no more moves to make, we lose
         return -1
