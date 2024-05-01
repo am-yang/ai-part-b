@@ -113,6 +113,7 @@ CELLS = 4
 PATH_COST = 1
 ROW = 'r'
 COLUMN = 'c'
+MAX_DEPTH = 150
 
 def all_possible_moves(
     board: dict[Coord, PlayerColor]
@@ -208,8 +209,12 @@ def apply_move(
     return new_board
 
 def is_terminal_state(
-    board: dict[Coord, PlayerColor]
+    board: dict[Coord, PlayerColor],
+    depth: int
 ) -> bool:
+    if depth == MAX_DEPTH:
+        return True
+
     # Traverse empty cells ADJACENT to a red cell
     for row in range(int(BOARD_N)):
         for column in range(int(BOARD_N)):
@@ -256,3 +261,14 @@ def moves_on_cell(
 
     return False
 
+
+def count_colors(
+    board: dict[Coord, PlayerColor],
+    color: PlayerColor
+) -> int:
+    count = 0
+    for key in board:
+        if board[key] == color:
+            count += 1
+    
+    return count
