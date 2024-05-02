@@ -60,20 +60,6 @@ RED = 1
 BLUE = 2
 VACANT = 0
 
-class Board():
-    '''
-    Board class that represents board using numpy array
-    '''
-    def __init__(self):
-        self.board = np.zeros((BOARD_DIMENSION, BOARD_DIMENSION), dtype=int)
-
-    def __setitem__(self, key, value):
-        self.board[key] = value
-
-    def __getitem__(self, key):
-        return self.board[key]
-
-
 def possible_actions(depth: int, board:np.ndarray, color:PlayerColor) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
