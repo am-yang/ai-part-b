@@ -2,8 +2,10 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Action, PlaceAction, Coord
-from .moves import apply_move, all_possible_moves
+from .moves import possible_actions, Board, apply_move, get_random_action
 from random import choice
+import numpy as np
+
 
 class Agent:
     """
@@ -17,17 +19,18 @@ class Agent:
         Any setup and/or precomputation should be done here.
         """
         self._color = color
-        self.board: dict[Coord, PlayerColor] = {} # internal game state of agent
         self.total_moves: int = 1
+        self.board = np.zeros((11, 11), dtype=int)
 
     def action(self, **referee: dict) -> Action:
         """
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object. 
         """
-        actions = all_possible_moves(self.board, self.total_moves, self._color)
+        action = get_random_action(self.total_moves, self.board, self._color)
 
-        return choice(actions)
+        return action
+
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
         """
@@ -36,6 +39,7 @@ class Agent:
         """
 
         place_action: PlaceAction = action
-        self.board = apply_move(self.board, place_action, color)
+
+        apply_move(self.board, place_action, color)
         self.total_moves += 1
 
