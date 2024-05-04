@@ -1,9 +1,8 @@
 # COMP30024 Artificial Intelligence, Semester 1 2024
 # Project Part B: Game Playing Agent
 
-from referee.game import PlayerColor, Action, PlaceAction, Coord
-from .moves import possible_actions, Board, apply_move, get_random_action
-from random import choice
+from referee.game import PlayerColor, Action, PlaceAction
+from .moves import apply_move, get_random_action
 import numpy as np
 
 

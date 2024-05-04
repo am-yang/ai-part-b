@@ -122,7 +122,10 @@ def generate_tetrominoes(board: np.ndarray, adjacent_row: int, adjacent_col: int
 
     return possible_actions
 
-def apply_move(board: np.ndarray, place_action: PlaceAction, color: PlayerColor):
+def apply_move(board: np.ndarray, place_action: PlaceAction, color: PlayerColor, make_copy: bool = False) -> np.ndarray:
+
+    board_ref = np.deepcopy(board) if make_copy else board # make copy of board if necessary
+
     player = RED if color == PlayerColor.RED else BLUE
 
     action_as_list = convert_to_tuple_list(place_action)
@@ -130,30 +133,31 @@ def apply_move(board: np.ndarray, place_action: PlaceAction, color: PlayerColor)
     rows = [rows for rows, _ in action_as_list]
     cols = [cols for _, cols in action_as_list]
 
-    board[action_as_list[0][0], action_as_list[0][1]] = board[action_as_list[1][0], action_as_list[1][1]] = \
-        board[action_as_list[2][0], action_as_list[2][1]] = board[action_as_list[3][0], action_as_list[3][1]] = player
+    board_ref[action_as_list[0][0], action_as_list[0][1]] = board_ref[action_as_list[1][0], action_as_list[1][1]] = \
+        board_ref[action_as_list[2][0], action_as_list[2][1]] = board_ref[action_as_list[3][0], action_as_list[3][1]] = player
 
     # Now make sure each row/col that is fully filled up, is cleared out 
     clear_out_row = []
     clear_out_col = []
     count_zeroes = 0
     for row in rows:
-        count_zeroes = np.count_nonzero(board[row, :] == VACANT)
+        count_zeroes = np.count_nonzero(board_ref[row, :] == VACANT)
         if count_zeroes == 0:
             clear_out_row.append(row)
 
     for col in cols:
-        count_zeroes = np.count_nonzero(board[:, col] == VACANT)
+        count_zeroes = np.count_nonzero(board_ref[:, col] == VACANT)
         if count_zeroes == 0:
             clear_out_col.append(col)
 
     # Now clear out rows and columns
     for row in clear_out_row:
-        board[row, :] = VACANT
+        board_ref[row, :] = VACANT
 
     for col in clear_out_col:
-        board[:, col] = VACANT
+        board_ref[:, col] = VACANT
 
+    return board_ref
     
 
 
