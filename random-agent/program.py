@@ -27,7 +27,7 @@ class Agent:
         to take an action. It must always return an action object. 
         """
         if self.total_moves <= 2:
-            return get_random_initial_action(self.board, self._color)
+            return get_random_initial_action(self.board)
         
         return get_random_action(self.board, self._color)
 
