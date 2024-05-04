@@ -2,7 +2,7 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Action, PlaceAction
-from .moves import apply_move, get_random_action, get_random_initial_action
+from .moves import apply_move, get_random_action, get_random_initial_action, convert_to_tuple_list
 import numpy as np
 
 
@@ -20,6 +20,8 @@ class Agent:
         self._color = color
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
+        self.opponent_tiles: list[tuple[int, int]] = [] # NEW
+
 
     def action(self, **referee: dict) -> Action:
         """
@@ -29,7 +31,7 @@ class Agent:
         if self.total_moves <= 2:
             return get_random_initial_action(self.board)
         
-        return get_random_action(self.board, self._color)
+        return get_random_action(self.board, self._color, self.opponent_tiles)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
@@ -40,6 +42,10 @@ class Agent:
 
         place_action: PlaceAction = action
 
-        apply_move(self.board, place_action, color)
+        apply_move(board=self.board, place_action=place_action, color=color)
         self.total_moves += 1
+
+        # Currently placing opponent tetromino
+        if self._color is not color:
+            self.opponent_tiles += convert_to_tuple_list(action)
 
