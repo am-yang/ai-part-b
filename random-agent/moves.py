@@ -1,11 +1,12 @@
 import numpy as np
+from copy import deepcopy
 from random import choice, randint
 from referee.game import PlaceAction, PlayerColor
 from referee.game.coord import Coord
 
 
 # Initialise board
-TETROMINOES = [
+TETROMINOES: list[list[tuple[int, int]]] = [
         # I shape
         [(0,0), (0,1), (0,2), (0,3)],[(0,-1), (0,0), (0,1), (0,2)], [(0,-2), (0,-1), (0,0), (0,1)], [(0,-3), (0,-2), (0,-1), (0,0)],
 
@@ -52,7 +53,7 @@ TETROMINOES = [
         [(0,0), (1,0), (1,1), (2,1)],[(0,0), (1,0), (0,-1), (-1,-1)],[(0,0), (0,1), (1,1), (-1,0)],[(0,0), (-1,0), (-1,-1), (-2,-1)]  
     ]
 
-ADJACENT = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+ADJACENT: list[tuple[int, int]] = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 BOARD_DIMENSION = 11
 CELLS = 4
@@ -60,39 +61,18 @@ RED = 1
 BLUE = 2
 VACANT = 0
 
-def possible_actions(board:np.ndarray, color:PlayerColor) -> list[list[tuple[int, int]]]:
+def possible_actions(board:np.ndarray, color:int) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
     '''
-
-    player_symbol = 0
-    if color == PlayerColor.RED: 
-        player_symbol = RED
-    else:
-        player_symbol = BLUE
-
     children = []
-    for row in range(BOARD_DIMENSION):
-        for col in range(BOARD_DIMENSION):
-            if board[row, col] == player_symbol:
-                # Check adjacent cells for valid moves
-                for adjacent_row, adjacent_col in ADJACENT:
-                    new_row, new_col = get_cell_coords(row + adjacent_row, col + adjacent_col)
-                    if board[new_row, new_col] == 0:
-                        # Generate move by placing shape
-                        children += generate_tetrominoes(board, new_row, new_col)
+    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, color)
+    for tile in empty_adjacent_tiles:
+        children += generate_tetrominoes(board, tile[0], tile[1])
     
-    unique_children = []
-    already_in_list = set()
-
-    for child in children:
-        # Convert the sublist to a tuple to make it hashable
-        sublist_tuple = tuple(child)
-        if sublist_tuple not in already_in_list:
-            unique_children.append(child)
-            already_in_list.add(sublist_tuple)
-
+    unique_children = [list(child) for child in set(tuple(child) for child in children)]
+    
     return unique_children
 
 
@@ -104,24 +84,26 @@ def get_cell_coords(row: int, col: int) -> tuple[int, int]:
     return new_row, new_col
 
 
-def generate_tetrominoes(board: np.ndarray, adjacent_row: int, adjacent_col: int) -> list[list[tuple[int, int]]]:
+def generate_tetrominoes(board: np.ndarray, cell_row: int, cell_col: int) -> list[list[tuple[int, int]]]:
     possible_actions = []
     for shape in TETROMINOES:
         tetromino = []
         for row, col in shape:
-            new_row, new_col = get_cell_coords(row + adjacent_row, col + adjacent_col)
+            new_row, new_col = get_cell_coords(row + cell_row, col + cell_col)
             if board[new_row, new_col] != VACANT:
                 break
             tetromino.append((new_row, new_col))
 
         if len(tetromino) == CELLS:
-            possible_actions.append(tetromino)
+            sorted_tetromino = sorted(tetromino)
+            possible_actions.append(sorted_tetromino)
 
     return possible_actions
 
+
 def apply_move(board: np.ndarray, place_action: PlaceAction, color: PlayerColor, make_copy: bool = False) -> np.ndarray:
 
-    board_ref = np.deepcopy(board) if make_copy else board # make copy of board if necessary
+    board_ref = deepcopy(board) if make_copy else board # make copy of board if necessary
 
     player = RED if color == PlayerColor.RED else BLUE
 
@@ -181,13 +163,38 @@ def convert_to_place_action(
 
 def get_random_action(board:np.ndarray, color: PlayerColor) -> PlaceAction:
 
-    actions: list[list[tuple[int, int]]] = possible_actions(board, color)
+    player_symbol = 0
+    if color == PlayerColor.RED: 
+        player_symbol = RED
+    else:
+        player_symbol = BLUE
+
+    actions: list[list[tuple[int, int]]] = possible_actions(board, player_symbol)
+    print("num actions: " + str(len(actions)))
     random = choice(actions)
 
     return convert_to_place_action(random)
 
 
-def get_random_initial_action(board:np.ndarray, color: PlayerColor) -> PlaceAction:
+
+def get_empty_adjacent_tiles(board: np.ndarray, color: int) -> list[tuple[int, int]]:
+    
+    empty_adjacent: list[tuple[int, int]] = []
+    for row in range(BOARD_DIMENSION):
+        for col in range(BOARD_DIMENSION):
+            # if current tile is not occupied by our player
+            if board[row, col] != color:
+                continue
+            # now check if adjacent tiles are free
+            for adjacent in ADJACENT:
+                new_row, new_col = get_cell_coords(row + adjacent[0], col + adjacent[1])
+                # Adjacent tile must be empty 
+                if board[new_row, new_col] == VACANT:
+                    empty_adjacent.append((new_row, new_col))
+    return list(set(empty_adjacent))
+
+
+def get_random_initial_action(board:np.ndarray) -> PlaceAction:
 
     x = randint(0, 9)
     y = randint(0, 9)
