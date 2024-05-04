@@ -1,5 +1,5 @@
 import numpy as np
-from random import choice
+from random import choice, randint
 from referee.game import PlaceAction, PlayerColor
 from referee.game.coord import Coord
 
@@ -60,7 +60,7 @@ RED = 1
 BLUE = 2
 VACANT = 0
 
-def possible_actions(depth: int, board:np.ndarray, color:PlayerColor) -> list[list[tuple[int, int]]]:
+def possible_actions(board:np.ndarray, color:PlayerColor) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
@@ -75,9 +75,6 @@ def possible_actions(depth: int, board:np.ndarray, color:PlayerColor) -> list[li
     children = []
     for row in range(BOARD_DIMENSION):
         for col in range(BOARD_DIMENSION):
-            if depth <= 2:
-                children += generate_tetrominoes(board, row, col)
-                continue
             if board[row, col] == player_symbol:
                 # Check adjacent cells for valid moves
                 for adjacent_row, adjacent_col in ADJACENT:
@@ -160,8 +157,6 @@ def apply_move(board: np.ndarray, place_action: PlaceAction, color: PlayerColor,
     return board_ref
     
 
-
-
 def convert_to_tuple_list(
     place_action: PlaceAction
 ) -> list[tuple[int, int]]:
@@ -184,13 +179,36 @@ def convert_to_place_action(
     return PlaceAction(coord1, coord2, coord3, coord4)
 
 
-def get_random_action(depth: int, board:np.ndarray, color: PlayerColor) -> PlaceAction:
+def get_random_action(board:np.ndarray, color: PlayerColor) -> PlaceAction:
 
-    actions: list[list[tuple[int, int]]] = possible_actions(depth, board, color)
+    actions: list[list[tuple[int, int]]] = possible_actions(board, color)
     random = choice(actions)
 
     return convert_to_place_action(random)
 
+
+def get_random_initial_action(board:np.ndarray, color: PlayerColor) -> PlaceAction:
+
+    x = randint(0, 9)
+    y = randint(0, 9)
+    relative_positions: list[tuple[int, int]] = choice(TETROMINOES)
+
+    temp: list[tuple[int, int]] = []
+
+    for position in relative_positions:
+        new_row, new_col = get_cell_coords(x + position[0], y + position[1])
+        temp.append((new_row, new_col))
+
+    # If there are conflicts, shift the entire randomly generated tetromino 4 cells to the right
+    position_index = 0
+    if (board[temp[0][0], temp[0][1]] != VACANT) or (board[temp[1][0], temp[1][1]] != VACANT) or \
+        (board[temp[2][0], temp[2][1]] != VACANT) or (board[temp[3][0], temp[3][1]] != VACANT):
+        for position in temp:
+            temp_row, temp_col = get_cell_coords(position[0] + CELLS, position[1])
+            temp[position_index] = (temp_row, temp_col)
+            position_index += 1
+
+    return convert_to_place_action(temp)
 
 def render(board: np.ndarray, use_color: bool=False, use_unicode: bool=False) -> str:
     """

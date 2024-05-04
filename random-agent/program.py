@@ -2,7 +2,7 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Action, PlaceAction
-from .moves import apply_move, get_random_action
+from .moves import apply_move, get_random_action, get_random_initial_action
 import numpy as np
 
 
@@ -26,9 +26,10 @@ class Agent:
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object. 
         """
-        action = get_random_action(self.total_moves, self.board, self._color)
-
-        return action
+        if self.total_moves <= 2:
+            return get_random_initial_action(self.board, self._color)
+        
+        return get_random_action(self.board, self._color)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
