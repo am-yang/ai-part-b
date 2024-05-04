@@ -54,12 +54,13 @@ TETROMINOES: list[list[tuple[int, int]]] = [
     ]
 
 ADJACENT: list[tuple[int, int]] = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
 BOARD_DIMENSION = 11
 CELLS = 4
 RED = 1
 BLUE = 2
 VACANT = 0
+
+reached_opponent = False
 
 def possible_actions(board:np.ndarray, color:int, opponent_tiles: list[tuple[int, int]]) -> list[list[tuple[int, int]]]:
     '''
@@ -73,15 +74,15 @@ def possible_actions(board:np.ndarray, color:int, opponent_tiles: list[tuple[int
     
     unique_children = [list(child) for child in set(tuple(child) for child in children)]
     # Storing actions and their corresponding values in a dict. Since some actions may have the same value, our dict value will be of type list
-    children_ranking: dict[tuple[int, int], list[list[tuple[int, int]]]] = {} 
+    children_ranking: dict[int, list[list[tuple[int, int]]]] = {} 
     for children in unique_children:
-        ranking_1, ranking_2 = evaluate_child(children, opponent_tiles, board, color)
-        if (ranking_1, ranking_2) not in children_ranking:
-            children_ranking[(ranking_1, ranking_2)] = [children]
+        ranking = evaluate_child(children, opponent_tiles, board, color)
+        if ranking not in children_ranking:
+            children_ranking[ranking] = [children]
         else:
-            children_ranking[(ranking_1, ranking_2)].append(children)
+            children_ranking[ranking].append(children)
 
-    smallest_heuristic = min(children_ranking.keys(), key=lambda ranking: (ranking[0], ranking[1]))
+    smallest_heuristic = min(children_ranking.keys())
     return children_ranking[smallest_heuristic]
 
 
@@ -108,14 +109,21 @@ def evaluate_child(
 
     # Part 1 manhattan distance calculation
     min_manhattan_distance = float('inf')
-    # TODO: FOR MINIMAX LOGIC: if parent has already reached an opponent tile, the child does not need to assess this part of the heuristic (will always be 1)
-    c1, c2, c3, c4 = action
-    for tile in opponent_tiles:
-        first_coord_distance = abs(c1[0] - tile[0]) + abs(c1[1] - tile[1])
-        second_coord_distance = abs(c2[0] - tile[0]) + abs(c2[1] - tile[1])
-        third_coord_distance = abs(c3[0] - tile[0]) + abs(c3[1] - tile[1])
-        fourth_coord_distance = abs(c4[0] - tile[0]) + abs(c4[1] - tile[1])
-        min_manhattan_distance = min(min_manhattan_distance, first_coord_distance, second_coord_distance, third_coord_distance, fourth_coord_distance)
+    global reached_opponent
+    if not reached_opponent:
+        # TODO: FOR MINIMAX LOGIC: if parent has already reached an opponent tile, the child does not need to assess this part of the heuristic (will always be 1)
+        c1, c2, c3, c4 = action
+        for tile in opponent_tiles:
+            first_coord_distance = abs(c1[0] - tile[0]) + abs(c1[1] - tile[1])
+            second_coord_distance = abs(c2[0] - tile[0]) + abs(c2[1] - tile[1])
+            third_coord_distance = abs(c3[0] - tile[0]) + abs(c3[1] - tile[1])
+            fourth_coord_distance = abs(c4[0] - tile[0]) + abs(c4[1] - tile[1])
+            min_manhattan_distance = min(min_manhattan_distance, first_coord_distance, second_coord_distance, third_coord_distance, fourth_coord_distance)
+
+        if min_manhattan_distance == 1:
+            reached_opponent = True
+    else:
+        min_manhattan_distance = 1
 
     # Part 2 number of adjacent tiles that are free
     free_adjacent_tiles: list[tuple[int, int]] = []
@@ -126,7 +134,7 @@ def evaluate_child(
             if action_applied_board[adjacent_tile[0], adjacent_tile[1]] == VACANT:
                 free_adjacent_tiles.append(adjacent_tile)
     
-    return (min_manhattan_distance, len(set(free_adjacent_tiles)))
+    return min_manhattan_distance + len(set(free_adjacent_tiles))
 
 
 def get_cell_coords(row: int, col: int) -> tuple[int, int]:
