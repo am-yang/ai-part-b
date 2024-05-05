@@ -119,9 +119,9 @@ def evaluate_child(
             third_coord_distance = abs(c3[0] - tile[0]) + abs(c3[1] - tile[1])
             fourth_coord_distance = abs(c4[0] - tile[0]) + abs(c4[1] - tile[1])
             min_manhattan_distance = min(min_manhattan_distance, first_coord_distance, second_coord_distance, third_coord_distance, fourth_coord_distance)
-
-        if min_manhattan_distance == 1:
-            reached_opponent = True
+            if min_manhattan_distance == 1:
+                reached_opponent = True
+                break
     else:
         min_manhattan_distance = 1
 
