@@ -55,6 +55,7 @@ TETROMINOES: list[list[tuple[int, int]]] = [
 
 ADJACENT: list[tuple[int, int]] = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 BOARD_DIMENSION = 11
+MAX_BOARD_INDEX = 10
 CELLS = 4
 RED = 1
 BLUE = 2
@@ -62,7 +63,11 @@ VACANT = 0
 
 reached_opponent = False
 
-def possible_actions(board:np.ndarray, color:int, opponent_tiles: list[tuple[int, int]]) -> list[list[tuple[int, int]]]:
+def possible_actions(
+    board:np.ndarray, 
+    color:int, 
+    opponent_tiles: list[tuple[int, int]]
+) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
@@ -91,7 +96,7 @@ def evaluate_child(
     opponent_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
-) -> tuple[int, int]:
+) -> int:
     '''
     Function that returns a heuristic value for a child state 
     We evaluate the 'usefulness' of the child. That is, how much we are able to block off the opponent from making potential actions
@@ -108,24 +113,66 @@ def evaluate_child(
     '''
 
     # Part 1 manhattan distance calculation
-    min_manhattan_distance = float('inf')
+    eval_1 = get_manhattan_distance(action=action, opponent_tiles=opponent_tiles)
+
+    # Part 2 number of adjacent tiles (to opponent) that are free
+    eval_2 = count_free_adjacent_opponent_tiles(action=action, opponent_tiles=opponent_tiles, board=board, curr_player=curr_player)
+
+    return eval_1 + eval_2
+
+
+def get_manhattan_distance(
+    action: list[tuple[int, int]], 
+    opponent_tiles: list[tuple[int, int]],
+) -> int:
+    '''
+    Part 1 manhattan distance calculation
+    '''
+    min_manhattan_distance = BOARD_DIMENSION + BOARD_DIMENSION
     global reached_opponent
     if not reached_opponent:
-        # TODO: FOR MINIMAX LOGIC: if parent has already reached an opponent tile, the child does not need to assess this part of the heuristic (will always be 1)
         c1, c2, c3, c4 = action
         for tile in opponent_tiles:
-            first_coord_distance = abs(c1[0] - tile[0]) + abs(c1[1] - tile[1])
-            second_coord_distance = abs(c2[0] - tile[0]) + abs(c2[1] - tile[1])
-            third_coord_distance = abs(c3[0] - tile[0]) + abs(c3[1] - tile[1])
-            fourth_coord_distance = abs(c4[0] - tile[0]) + abs(c4[1] - tile[1])
+            first_coord_distance = get_min_distance(tile[0], tile[1], c1[0], c1[1])
+            second_coord_distance = get_min_distance(tile[0], tile[1], c2[0], c2[1])
+            third_coord_distance = get_min_distance(tile[0], tile[1], c3[0], c3[1])
+            fourth_coord_distance = get_min_distance(tile[0], tile[1], c4[0], c4[1])
             min_manhattan_distance = min(min_manhattan_distance, first_coord_distance, second_coord_distance, third_coord_distance, fourth_coord_distance)
             if min_manhattan_distance == 1:
                 reached_opponent = True
                 break
     else:
         min_manhattan_distance = 1
+    
+    return min_manhattan_distance
 
-    # Part 2 number of adjacent tiles that are free
+def get_min_distance(
+    opponent_row: int,
+    opponent_col: int,
+    player_row: int,
+    player_col: int
+) -> int:
+    '''
+    Helper that returns the shortest cell distance between two rows and two columns
+    While computing abs(x - y) would have sufficed, we need to take into account the torus behavior of the board
+    '''
+    row_distance_1 = abs(opponent_row - player_row)
+    row_distance_2 = (MAX_BOARD_INDEX - opponent_row) + player_row if player_row < opponent_row else (MAX_BOARD_INDEX - player_row) + opponent_row
+
+    col_distance_1 = abs(opponent_col - player_col)
+    col_distance_2 = (MAX_BOARD_INDEX - opponent_col) + player_col if player_col < opponent_col else (MAX_BOARD_INDEX - player_col) + opponent_col
+
+    return min(row_distance_1, row_distance_2) + min(col_distance_1, col_distance_2) 
+
+def count_free_adjacent_opponent_tiles(
+    action: list[tuple[int, int]], 
+    opponent_tiles: list[tuple[int, int]],
+    board: np.ndarray,
+    curr_player: int
+) -> int:
+    '''
+    Part 2 number of adjacent tiles that are free
+    '''
     free_adjacent_tiles: list[tuple[int, int]] = []
     action_applied_board = apply_move(board=board, place_action=None, color=curr_player, make_copy=True, place_action_list=action)
     for tile in opponent_tiles:
@@ -134,7 +181,8 @@ def evaluate_child(
             if action_applied_board[adjacent_tile[0], adjacent_tile[1]] == VACANT:
                 free_adjacent_tiles.append(adjacent_tile)
     
-    return min_manhattan_distance + len(set(free_adjacent_tiles))
+    return len(set(free_adjacent_tiles))
+
 
 
 def get_cell_coords(row: int, col: int) -> tuple[int, int]:
@@ -145,7 +193,11 @@ def get_cell_coords(row: int, col: int) -> tuple[int, int]:
     return new_row, new_col
 
 
-def generate_tetrominoes(board: np.ndarray, cell_row: int, cell_col: int) -> list[list[tuple[int, int]]]:
+def generate_tetrominoes(
+    board: np.ndarray,
+    cell_row: int, 
+    cell_col: int
+) -> list[list[tuple[int, int]]]:
     possible_actions = []
     for shape in TETROMINOES:
         tetromino = []
@@ -238,6 +290,11 @@ def get_random_action(board:np.ndarray, color: PlayerColor, opponent_tiles: list
 
     actions: list[list[tuple[int, int]]] = possible_actions(board, player_symbol, opponent_tiles)
 
+    # print("num children: " + str(len(actions)))
+    # for action in actions:
+    #     new_board = apply_move(board, color, place_action=None, make_copy=True, place_action_list=action)
+    #     print(render(new_board))
+        
     random = choice(actions)
 
     return convert_to_place_action(random)
