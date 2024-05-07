@@ -21,6 +21,7 @@ class Agent:
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
         self.opponent_tiles: list[tuple[int, int]] = [] # NEW
+        self.player_tiles: list[tuple[int, int]] = [] # ALSO NEW
 
 
     def action(self, **referee: dict) -> Action:
@@ -28,10 +29,15 @@ class Agent:
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object. 
         """
-        if self.total_moves <= 2:
+        if self.total_moves == 1:
             return get_random_initial_action(self.board)
         
-        return get_random_action(self.board, self._color, self.opponent_tiles)
+        
+        if self.total_moves == 2:
+            return get_random_action(self.board, self._color, self.opponent_tiles, self.player_tiles, True)
+        
+        if self.total_moves <= 3:
+            return get_random_action(self.board, self._color, self.opponent_tiles, self.player_tiles)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
@@ -46,6 +52,9 @@ class Agent:
         self.total_moves += 1
 
         # Currently placing opponent tetromino
-        if self._color is not color:
+        if self._color != color:
             self.opponent_tiles += convert_to_tuple_list(action)
+        else: 
+            self.player_tiles += convert_to_tuple_list(action)
+
 

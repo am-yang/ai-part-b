@@ -63,63 +63,105 @@ VACANT = 0
 
 reached_opponent = False
 
+
+def generate_tetrominoes(
+    board: np.ndarray,
+    cell_row: int, 
+    cell_col: int
+) -> list[list[tuple[int, int]]]:
+    possible_actions = []
+    for shape in TETROMINOES:
+        tetromino = []
+        for row, col in shape:
+            new_row, new_col = get_cell_coords(row + cell_row, col + cell_col)
+            if board[new_row, new_col] != VACANT:
+                break
+            tetromino.append((new_row, new_col))
+
+        if len(tetromino) == CELLS:
+            sorted_tetromino = sorted(tetromino)
+            possible_actions.append(sorted_tetromino)
+    
+    return possible_actions
+
+
+def get_remaining_empty_tiles(
+    opponent_tiles: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    
+    return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
+
+
+
 def possible_actions(
     board:np.ndarray, 
     color:int, 
-    opponent_tiles: list[tuple[int, int]]
+    opponent_tiles: list[tuple[int, int]],
+    player_tiles: list[tuple[int, int]],
+    is_first_action: bool = False
 ) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
     '''
-    children = []
-    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, color)
+    actions = []
+    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, color) if not is_first_action else get_remaining_empty_tiles(opponent_tiles)
     for tile in empty_adjacent_tiles:
-        children += generate_tetrominoes(board, tile[0], tile[1])
+        actions += generate_tetrominoes(board, tile[0], tile[1])
     
-    unique_children = [list(child) for child in set(tuple(child) for child in children)]
-    # Storing actions and their corresponding values in a dict. Since some actions may have the same value, our dict value will be of type list
-    children_ranking: dict[int, list[list[tuple[int, int]]]] = {} 
-    for children in unique_children:
-        ranking = evaluate_child(children, opponent_tiles, board, color)
-        if ranking not in children_ranking:
-            children_ranking[ranking] = [children]
-        else:
-            children_ranking[ranking].append(children)
+    unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
-    smallest_heuristic = min(children_ranking.keys())
-    return children_ranking[smallest_heuristic]
+    # Grouping actions and their ranking together, and saving them in a list
+    children_ranking: list[tuple[tuple[int, int, int, int], list[tuple[int, int]]]] = []
+
+    for action in unique_actions:
+        ranking = evaluate_child(action=action, opponent_tiles=opponent_tiles, player_tiles=player_tiles, board=board, curr_player=color)
+        children_ranking.append((ranking, action))
+
+    children_ranking = sorted(children_ranking)
+
+    sorted_unique_actions = [action for (_, action) in children_ranking]
+
+    return sorted_unique_actions
 
 
 def evaluate_child(
     action: list[tuple[int, int]], 
     opponent_tiles: list[tuple[int, int]],
+    player_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
-) -> int:
+) -> tuple[int, int, int, int]:
     '''
     Function that returns a heuristic value for a child state 
     We evaluate the 'usefulness' of the child. That is, how much we are able to block off the opponent from making potential actions
     
     The ranking consists of two parts (added together):
 
-    Part 1:
-    The manhattan distance of us from the nearest opponent tile. 
+    Part 1: The manhattan distance of us from the nearest opponent tile. 
     
-    Part 2:
-    The number of tiles adjacent to the opponent that are blocked off (thereby limiting potential moves) 
+    Part 2: The number of tiles adjacent to the opponent that are blocked off (thereby limiting potential moves) 
 
-    This ranking helps, because we don't want to waste time visiting moves that take us further from the goal (of blocking the opponent)
+    Part 3: The number of free ADJACENT player tiles
+
+    Part 4: the number of player tiles in total 
+
+    This ranking helps, because we want to alpha-beta prune moves that take us further from the goal (of blocking the opponent)
     '''
 
     # Part 1 manhattan distance calculation
     eval_1 = get_manhattan_distance(action=action, opponent_tiles=opponent_tiles)
 
     # Part 2 number of adjacent tiles (to opponent) that are free
-    eval_2 = count_free_adjacent_opponent_tiles(action=action, opponent_tiles=opponent_tiles, board=board, curr_player=curr_player)
+    eval_2 = count_free_adjacent_tiles(action=action, occupied_tiles=opponent_tiles, board=board, curr_player=curr_player)
 
-    return eval_1 + eval_2
+    # Part 3 number of adjacent player tiles available; we want to MAXIMISE this value as it gives us more opportunities to play moves
+    eval_3 = count_free_adjacent_tiles(action=action, occupied_tiles=player_tiles, board=board, curr_player=curr_player) * -1
 
+    # Part 4 number of player tiles in total (could be omitted TBH)
+    eval_4 = len(player_tiles)
+
+    return (eval_1, eval_2, eval_3, eval_4)
 
 def get_manhattan_distance(
     action: list[tuple[int, int]], 
@@ -164,9 +206,10 @@ def get_min_distance(
 
     return min(row_distance_1, row_distance_2) + min(col_distance_1, col_distance_2) 
 
-def count_free_adjacent_opponent_tiles(
+
+def count_free_adjacent_tiles(
     action: list[tuple[int, int]], 
-    opponent_tiles: list[tuple[int, int]],
+    occupied_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
 ) -> int:
@@ -175,7 +218,7 @@ def count_free_adjacent_opponent_tiles(
     '''
     free_adjacent_tiles: list[tuple[int, int]] = []
     action_applied_board = apply_move(board=board, place_action=None, color=curr_player, make_copy=True, place_action_list=action)
-    for tile in opponent_tiles:
+    for tile in occupied_tiles:
         for adjacent in ADJACENT:
             adjacent_tile = get_cell_coords(tile[0] + adjacent[0], tile[1] + adjacent[1])
             if action_applied_board[adjacent_tile[0], adjacent_tile[1]] == VACANT:
@@ -193,38 +236,21 @@ def get_cell_coords(row: int, col: int) -> tuple[int, int]:
     return new_row, new_col
 
 
-def generate_tetrominoes(
-    board: np.ndarray,
-    cell_row: int, 
-    cell_col: int
-) -> list[list[tuple[int, int]]]:
-    possible_actions = []
-    for shape in TETROMINOES:
-        tetromino = []
-        for row, col in shape:
-            new_row, new_col = get_cell_coords(row + cell_row, col + cell_col)
-            if board[new_row, new_col] != VACANT:
-                break
-            tetromino.append((new_row, new_col))
-
-        if len(tetromino) == CELLS:
-            sorted_tetromino = sorted(tetromino)
-            possible_actions.append(sorted_tetromino)
-
-    return possible_actions
-
 
 def apply_move(
     board: np.ndarray, 
-    color: PlayerColor, 
+    color: PlayerColor=None, 
     place_action: PlaceAction=None, 
     make_copy: bool = False, 
-    place_action_list: list[tuple[int, int]] = None
+    place_action_list: list[tuple[int, int]] = None,
+    color_int: int = 0
 ) -> np.ndarray:
 
     board_ref = deepcopy(board) if make_copy else board # make copy of board if necessary
 
-    player = RED if color == PlayerColor.RED else BLUE
+    player = color_int
+    if color:
+        player = RED if color == PlayerColor.RED else BLUE
 
     action_as_list = convert_to_tuple_list(place_action) if place_action_list is None else place_action_list
 
@@ -280,7 +306,13 @@ def convert_to_place_action(
     return PlaceAction(coord1, coord2, coord3, coord4)
 
 
-def get_random_action(board:np.ndarray, color: PlayerColor, opponent_tiles: list[tuple[int, int]]) -> PlaceAction:
+def get_random_action(
+    board:np.ndarray, 
+    color: PlayerColor, 
+    opponent_tiles: list[tuple[int, int]],
+    player_tiles: list[tuple[int, int]],
+    is_first_action: bool = False
+) -> PlaceAction:
 
     player_symbol = 0
     if color == PlayerColor.RED: 
@@ -288,16 +320,18 @@ def get_random_action(board:np.ndarray, color: PlayerColor, opponent_tiles: list
     else:
         player_symbol = BLUE
 
-    actions: list[list[tuple[int, int]]] = possible_actions(board, player_symbol, opponent_tiles)
+    actions: list[list[tuple[int, int]]] = possible_actions(board, player_symbol, opponent_tiles, player_tiles, is_first_action)
 
     # print("num children: " + str(len(actions)))
     # for action in actions:
     #     new_board = apply_move(board, color, place_action=None, make_copy=True, place_action_list=action)
     #     print(render(new_board))
-        
-    random = choice(actions)
+    
+    # random = choice(actions)
 
-    return convert_to_place_action(random)
+    # return convert_to_place_action(random)
+    
+    return convert_to_place_action(actions[0])
 
 
 
