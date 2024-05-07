@@ -31,12 +31,11 @@ class Agent:
         """
         if self.total_moves == 1:
             return get_random_initial_action(self.board)
-        
-        
-        if self.total_moves == 2:
+    
+        elif self.total_moves == 2:
             return get_random_action(self.board, self._color, self.opponent_tiles, self.player_tiles, True)
-        
-        if self.total_moves <= 3:
+    
+        else:
             return get_random_action(self.board, self._color, self.opponent_tiles, self.player_tiles)
 
 
