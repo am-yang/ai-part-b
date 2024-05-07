@@ -2,8 +2,9 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Action, PlaceAction
-from .moves import apply_move, get_random_initial_action, convert_to_tuple_list
+from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, convert_to_place_action, possible_actions, RED, BLUE
 from .minimax_basic import get_minimax_action
+from random import choice
 import numpy as np
 
 
@@ -19,6 +20,7 @@ class Agent:
         Any setup and/or precomputation should be done here.
         """
         self._color = color
+        self.color_int = RED if color == PlayerColor.RED else BLUE
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
         self.opponent_tiles: list[tuple[int, int]] = [] # NEW
@@ -29,10 +31,14 @@ class Agent:
         This method is called by the referee each time it is the agent's turn
         to take an action. It must always return an action object. 
         """
-        if self.total_moves <= 2:
+        if self.total_moves == 1:
             return get_random_initial_action(self.board)
-
-        return get_minimax_action(self.board, self.total_moves, self._color, self.opponent_tiles, self.player_tiles)
+        
+        elif self.total_moves == 2:
+            actions = possible_actions(self.board, self.color_int, self.opponent_tiles, self.player_tiles, is_first_action=True)
+            return convert_to_place_action(actions[0])
+        
+        # return get_minimax_action(self.board, self.total_moves, self._color, self.opponent_tiles, self.player_tiles)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):

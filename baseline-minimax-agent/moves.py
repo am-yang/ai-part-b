@@ -65,96 +65,83 @@ TOO_LARGE_BRANCHING_FACTOR = 100
 
 reached_opponent = False
 
+def get_remaining_empty_tiles(
+    opponent_tiles: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    
+    return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
+
+
+
 def possible_actions(
     board:np.ndarray, 
     color:int, 
-    opponent_tiles: list[tuple[int, int]]
+    opponent_tiles: list[tuple[int, int]],
+    player_tiles: list[tuple[int, int]],
+    is_first_action: bool = False
 ) -> list[list[tuple[int, int]]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
     '''
-    children = []
-    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, color)
+    actions = []
+    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, color) if is_first_action == False else get_remaining_empty_tiles(opponent_tiles)
     for tile in empty_adjacent_tiles:
-        children += generate_tetrominoes(board, tile[0], tile[1])
+        actions += generate_tetrominoes(board, tile[0], tile[1])
     
-    unique_children = [list(child) for child in set(tuple(child) for child in children)]
+    unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
-    # if len(unique_children) == 0:
-    #     string = "RED" if color == RED else "BLUE"
-    #     print("Curr player is: " + string)
-    #     print(render(board, True))
+    # Grouping actions and their ranking together, and saving them in a list
+    children_ranking: list[tuple[tuple[int, int, int, int], list[tuple[int, int]]]] = []
 
-    # Storing actions and their corresponding values in a dict. Since some actions may have the same value, our dict value will be of type list
-    children_ranking: dict[int, list[list[tuple[int, int]]]] = {} 
-    for children in unique_children:
-        ranking = evaluate_child(children, opponent_tiles, board, color)
-        if ranking not in children_ranking:
-            children_ranking[ranking] = [children]
-        else:
-            children_ranking[ranking].append(children)
+    for action in unique_actions:
+        ranking = evaluate_child(action=action, opponent_tiles=opponent_tiles, player_tiles=player_tiles, board=board, curr_player=color)
+        children_ranking.append((ranking, action))
 
-    smallest_heuristic = min(children_ranking.keys())
+    children_ranking = sorted(children_ranking)
 
-    # If branching factor is too large, perform another heuristic evaluation
-    if (len(children_ranking[smallest_heuristic]) >= MAX_BOARD_INDEX):
-        # Part 3 calculate the furthest manhattan distance from the opponent 
-        eval_3 = furthest_distance(children, opponent_tiles, board, color)
+    sorted_unique_actions = [action for (_, action) in children_ranking]
 
-    return children_ranking[smallest_heuristic]
+    return sorted_unique_actions
 
 
 def evaluate_child(
     action: list[tuple[int, int]], 
     opponent_tiles: list[tuple[int, int]],
+    player_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
-) -> int:
+) -> tuple[int, int, int, int]:
     '''
     Function that returns a heuristic value for a child state 
-    We evaluate the 'usefulness' of the child. That is, how much we are able to block off the opponent from making potential actions. Our filtering mechanism
-    helps, because we don't want to waste time visiting moves that take us further from the goal (of blocking the opponent)
+    We evaluate the 'usefulness' of the child. That is, how much we are able to block off the opponent from making potential actions
     
     The ranking consists of two parts (added together):
 
-    Part 1:
-    The manhattan distance of us from the nearest opponent tile. 
+    Part 1: The manhattan distance of us from the nearest opponent tile. 
     
-    Part 2:
-    The number of tiles adjacent to the opponent that are blocked off (thereby limiting potential moves) 
+    Part 2: The number of tiles adjacent to the opponent that are blocked off (thereby limiting potential moves) 
 
-    Part 3:
-    Minimise the furthest distance from opponent. Say that no moves can further fill an opponenent's adjacent tile,
-    try to determine the furthest distance from the opponent (so that we are continuously moving closer to the opponent) 
-    and choose the node with the minimal furthest distance
+    Part 3: The number of free ADJACENT player tiles
+
+    Part 4: the number of player tiles in total 
+
+    This ranking helps, because we want to alpha-beta prune moves that take us further from the goal (of blocking the opponent)
     '''
 
     # Part 1 manhattan distance calculation
     eval_1 = get_manhattan_distance(action=action, opponent_tiles=opponent_tiles)
 
     # Part 2 number of adjacent tiles (to opponent) that are free
-    eval_2 = count_free_adjacent_opponent_tiles(action=action, opponent_tiles=opponent_tiles, board=board, curr_player=curr_player)
+    eval_2 = count_free_adjacent_tiles(action=action, occupied_tiles=opponent_tiles, board=board, curr_player=curr_player)
 
-    return eval_1 + eval_2
+    # Part 3 number of adjacent player tiles available; we want to MAXIMISE this value as it gives us more opportunities to play moves
+    eval_3 = count_free_adjacent_tiles(action=action, occupied_tiles=player_tiles, board=board, curr_player=curr_player) * -1
 
+    # Part 4 number of player tiles in total (could be omitted TBH)
+    eval_4 = len(player_tiles)
 
-def furthest_distance(
-    actions: list[list[tuple[int, int]]], 
-    opponent_tiles: list[tuple[int, int]],
-    board: np.ndarray,
-    curr_player: int
-) -> int:
-    
-    max_distance = 0
-    for action in actions:
-        curr_distance = get_manhattan_distance(action=action, opponent_tiles=opponent_tiles)
-        if curr_distance > max_distance:
-            max_distance = curr_distance
-    
-    return max_distance
-    
-
+    return (eval_1, eval_2, eval_3, eval_4)
 
 
 def get_manhattan_distance(
@@ -202,18 +189,16 @@ def get_min_distance(
     return min(row_distance_1, row_distance_2) + min(col_distance_1, col_distance_2) 
 
 
-def count_free_adjacent_opponent_tiles(
+def count_free_adjacent_tiles(
     action: list[tuple[int, int]], 
-    opponent_tiles: list[tuple[int, int]],
+    occupied_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
 ) -> int:
-    '''
-    Part 2 number of adjacent tiles that are free
-    '''
+
     free_adjacent_tiles: list[tuple[int, int]] = []
     action_applied_board = apply_move(board=board, place_action=None, color=None, place_action_list=action, color_as_int=curr_player)
-    for tile in opponent_tiles:
+    for tile in occupied_tiles:
         for adjacent in ADJACENT:
             adjacent_tile = get_cell_coords(tile[0] + adjacent[0], tile[1] + adjacent[1])
             if action_applied_board[adjacent_tile[0], adjacent_tile[1]] == VACANT:
@@ -366,22 +351,13 @@ def get_random_initial_action(
     y = randint(0, 9)
     relative_positions: list[tuple[int, int]] = choice(TETROMINOES)
 
-    temp: list[tuple[int, int]] = []
+    action: list[tuple[int, int]] = []
 
     for position in relative_positions:
         new_row, new_col = get_cell_coords(x + position[0], y + position[1])
-        temp.append((new_row, new_col))
+        action.append((new_row, new_col))
 
-    # If there are conflicts, shift the entire randomly generated tetromino 4 cells to the right
-    position_index = 0
-    if (board[temp[0][0], temp[0][1]] != VACANT) or (board[temp[1][0], temp[1][1]] != VACANT) or \
-        (board[temp[2][0], temp[2][1]] != VACANT) or (board[temp[3][0], temp[3][1]] != VACANT):
-        for position in temp:
-            temp_row, temp_col = get_cell_coords(position[0] + CELLS, position[1])
-            temp[position_index] = (temp_row, temp_col)
-            position_index += 1
-
-    return convert_to_place_action(temp)
+    return convert_to_place_action(action)
 
 
 # def count_colors(
