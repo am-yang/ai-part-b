@@ -1,0 +1,15 @@
+* referee : =========================== game board ===========================
+* referee : 
+* referee :                       r b b b . . . . . . . 
+* referee :                       r b . . . . . . . . . 
+* referee :                       . r b . . . . . . . . 
+* referee :                       . r b b . . . . . . . 
+* referee :                       . r r b . . . . . . . 
+* referee :                       . r b b . . . . . . . 
+* referee :                       . r r b . . . . . . . 
+* referee :                       . . r b . . . . . . . 
+* referee :                       . . r b . . . . . . . 
+* referee :                       r r r b . . . . . . . 
+* referee :                       r b r b . . . . . . . 
+* referee : 
+* referee : ==================================================================
