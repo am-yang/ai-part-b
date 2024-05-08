@@ -3,7 +3,7 @@ from referee.game import PlayerColor, PlaceAction
 from copy import deepcopy
 import numpy as np
 
-CUTOFF_DEPTH = 4
+CUTOFF_DEPTH = 5
 # In the context of chess: 4-ply lookahead is very average. Try to get to 5. 
 
 class MiniMaxNode:
