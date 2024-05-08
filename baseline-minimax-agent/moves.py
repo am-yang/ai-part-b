@@ -91,18 +91,19 @@ def possible_actions(
     
     unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
-    # Grouping actions and their ranking together, and saving them in a list
-    children_ranking: list[tuple[tuple[int, int, int, int], list[tuple[int, int]]]] = []
+    # Group action with a specific ranking (AKA weight). Since many actions may have the same ranking, we group them in a list (of actions).
+    children_ranking: dict[tuple[int, int, int], list[list[tuple[int, int]]]] = {}
 
     for action in unique_actions:
         ranking = evaluate_child(action=action, opponent_tiles=opponent_tiles, player_tiles=player_tiles, board=board, curr_player=color)
-        children_ranking.append((ranking, action))
+        if ranking in children_ranking:
+            children_ranking[ranking].append(action)
+        else:
+            children_ranking[ranking] = [action]
 
-    children_ranking = sorted(children_ranking)
+    best_ranking = min(children_ranking.keys())
 
-    sorted_unique_actions = [action for (_, action) in children_ranking]
-
-    return sorted_unique_actions
+    return children_ranking[best_ranking]
 
 
 def evaluate_child(
@@ -111,7 +112,7 @@ def evaluate_child(
     player_tiles: list[tuple[int, int]],
     board: np.ndarray,
     curr_player: int
-) -> tuple[int, int, int, int]:
+) -> tuple[int, int, int]: #, int, int]:
     '''
     Function that returns a heuristic value for a child state 
     We evaluate the 'usefulness' of the child. That is, how much we are able to block off the opponent from making potential actions
@@ -139,9 +140,9 @@ def evaluate_child(
     eval_3 = count_free_adjacent_tiles(action=action, occupied_tiles=player_tiles, board=board, curr_player=curr_player) * -1
 
     # Part 4 number of player tiles in total (could be omitted TBH)
-    eval_4 = len(player_tiles)
+    # eval_4 = len(player_tiles)
 
-    return (eval_1, eval_2, eval_3, eval_4)
+    return (eval_1, eval_2, eval_3) # (eval_1, eval_2, eval_3, eval_4)
 
 
 def get_manhattan_distance(
@@ -358,18 +359,6 @@ def get_random_initial_action(
         action.append((new_row, new_col))
 
     return convert_to_place_action(action)
-
-
-# def count_colors(
-#     board: np.ndarray, 
-#     color: int
-# ) -> int:
-#     count = 0
-#     for row in range(BOARD_DIMENSION):
-#         for col in range(BOARD_DIMENSION):
-#             if board[row,col] == color:
-#                 count += 1
-#     return count
 
 
 def is_terminal_state(

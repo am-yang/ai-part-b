@@ -111,6 +111,8 @@ def possible_actions(
     
     unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
+    return unique_actions # ADDED FOR TESTING!!!!!!!!
+
     # Grouping actions and their ranking together, and saving them in a list
     children_ranking: list[tuple[tuple[int, int, int, int], list[tuple[int, int]]]] = []
 
@@ -327,11 +329,11 @@ def get_random_action(
     #     new_board = apply_move(board, color, place_action=None, make_copy=True, place_action_list=action)
     #     print(render(new_board))
     
-    # random = choice(actions)
+    random = choice(actions)
 
-    # return convert_to_place_action(random)
+    return convert_to_place_action(random)
     
-    return convert_to_place_action(actions[0])
+    # return convert_to_place_action(actions[0])
 
 
 

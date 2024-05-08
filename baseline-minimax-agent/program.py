@@ -38,7 +38,8 @@ class Agent:
             actions = possible_actions(self.board, self.color_int, self.opponent_tiles, self.player_tiles, is_first_action=True)
             return convert_to_place_action(actions[0])
         
-        # return get_minimax_action(self.board, self.total_moves, self._color, self.opponent_tiles, self.player_tiles)
+        elif self.total_moves == 3:
+            return get_minimax_action(self.board, self.total_moves, self._color, self.opponent_tiles, self.player_tiles)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):

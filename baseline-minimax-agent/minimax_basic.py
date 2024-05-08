@@ -3,7 +3,7 @@ from referee.game import PlayerColor, PlaceAction
 from copy import deepcopy
 import numpy as np
 
-CUTOFF_DEPTH = 3
+CUTOFF_DEPTH = 4
 # In the context of chess: 4-ply lookahead is very average. Try to get to 5. 
 
 class MiniMaxNode:
@@ -50,9 +50,10 @@ def evaluation(
         else: 
             return 0
         
-    # empty_opponent_tiles = get_empty_adjacent_tiles(node.state, opponent_color)
-    opponent_action = possible_actions(node.state, opponent_color, node.opponent_tiles, node.player_tiles, True)
-    return -1 * len(opponent_action)
+    empty_opponent_tiles = get_empty_adjacent_tiles(node.state, opponent_color)
+    return -1 * len(empty_opponent_tiles)
+    # opponent_action = possible_actions(node.state, opponent_color, node.opponent_tiles, node.player_tiles, True)
+    # return -1 * len(opponent_action)
 
 
 def get_minimax_action(
@@ -87,14 +88,14 @@ def get_minimax_action(
             action = child.parent_action
             break
     
-    print("Returned value is: " + str(max_val))
     return convert_to_place_action(action)
 
 
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int):
     
     if explore_depth == 0:
-        return evaluation(node)
+        eval = evaluation(node)
+        return eval
     
     if is_terminal_state(board=node.state, depth=node.depth, color=node.color) and node.depth > 2:
         if node.depth == MAX_DEPTH:
@@ -113,15 +114,13 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         if not node.children:
             node.children = init_children(node)
         # print("Depth: " + str(node.depth ) + ", num children: " + str(len(node.children)))
-        # print(render(node.state, True))
         for child in node.children:
-            eval = minimax(child, alpha, beta, False, explore_depth - 1)
-            max_eval = max(max_eval, eval)
-            alpha = max(alpha, eval)
+            child.value = minimax(child, alpha, beta, False, explore_depth - 1)
+            max_eval = max(max_eval, child.value)
+            alpha = max(alpha, child.value)
             if beta <= alpha:
                 break 
         node.value = max_eval
-        print("Is max, Depth: " + str(node.depth ) + ", num children: " + str(len(node.children)) + ", node value: " + str(node.value))
         return max_eval
 
     else:
@@ -132,14 +131,13 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         # print("Depth: " + str(node.depth ) + ", num children: " + str(len(node.children)))
         # print(render(node.state, True))
         for child in node.children:
-            eval = minimax(child, alpha, beta, True, explore_depth - 1)
-            min_eval = min(min_eval, eval)
-            beta = min(beta, eval)
+            child.value = minimax(child, alpha, beta, True, explore_depth - 1)
+            min_eval = min(min_eval, child.value)
+            beta = min(beta, child.value)
             if beta <= alpha:
                 break
         
         node.value = min_eval
-        print("Is min, Depth: " + str(node.depth ) + ", num children: " + str(len(node.children)) + ", node value: " + str(node.value))
         return min_eval
 
 
