@@ -2,6 +2,7 @@ import math
 import random
 from .moves import all_possible_moves, is_terminal_state, apply_move, count_colors
 from referee.game import PlayerColor, Coord, PlaceAction
+import ast
 
 UCB_CONSTANT = 1
 TIME_LIMIT = 50

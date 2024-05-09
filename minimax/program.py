@@ -2,7 +2,7 @@
 # Project Part B: Game Playing Agent
 
 from referee.game import PlayerColor, Action, PlaceAction
-from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, convert_to_place_action, possible_actions, RED, BLUE
+from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, RED, BLUE, possible_actions, convert_to_place_action, render
 from .minimax_basic import get_minimax_action
 from random import choice
 import numpy as np
@@ -35,10 +35,10 @@ class Agent:
             return get_random_initial_action(self.board)
         
         elif self.total_moves == 2:
-            actions = possible_actions(self.board, self.color_int, self.opponent_tiles, self.player_tiles, is_first_action=True)
-            return convert_to_place_action(actions[0])
+            opponent_color = BLUE if self.color_int == RED else RED
+            return get_random_initial_action(self.board, opponent_color, False)
         
-        return get_minimax_action(self.board, self.total_moves, self._color, self.opponent_tiles, self.player_tiles)
+        return get_minimax_action(self.board, self.total_moves, self._color)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
@@ -55,9 +55,7 @@ class Agent:
             color=color, 
             place_action=place_action, 
             place_action_list=None, 
-            color_as_int=None, 
-            opponent_tiles=self.opponent_tiles, 
-            player_tiles=self.player_tiles
+            color_as_int=None
         )
 
 

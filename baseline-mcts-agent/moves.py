@@ -1,287 +1,263 @@
-# Source file which contains all helper functions that allow
-# us to generate all (valid) moves at a given turn 
+import numpy as np
+from copy import deepcopy
+from random import choice, randint
+from referee.game import PlaceAction, PlayerColor
+from referee.game.coord import Coord
 
-from referee.game import PlayerColor, PlaceAction, Coord, Direction
-from referee.game.constants import BOARD_N 
-from referee.game.coord import Vector2
 
-TETROMINOES = [
+# Initialise board
+TETROMINOES: list[list[tuple[int, int]]] = [
         # I shape
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(0,3)],
-        [Vector2(0,-1), Vector2(0,0), Vector2(0,1), Vector2(0,2)],
-        [Vector2(0,-2), Vector2(0,-1), Vector2(0,0), Vector2(0,1)],
-        [Vector2(0,-3), Vector2(0,-2), Vector2(0,-1), Vector2(0,0)],
+        [(0,0), (0,1), (0,2), (0,3)],[(0,-1), (0,0), (0,1), (0,2)], [(0,-2), (0,-1), (0,0), (0,1)], [(0,-3), (0,-2), (0,-1), (0,0)],
 
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(3,0)],
-        [Vector2(-1,0), Vector2(0,0), Vector2(1,0), Vector2(2,0)],
-        [Vector2(-2,0), Vector2(-1,0), Vector2(0,0), Vector2(1,0)],
-        [Vector2(-3,0), Vector2(-2,0), Vector2(-1,0), Vector2(0,0)],
+        [(0,0), (1,0), (2,0), (3,0)], [(-1,0), (0,0), (1,0), (2,0)],[(-2,0), (-1,0), (0,0), (1,0)],[(-3,0), (-2,0), (-1,0), (0,0)],
 
         # O shape
-        [Vector2(0,0), Vector2(0,1), Vector2(1,0), Vector2(1,1)],
-        [Vector2(0,-1), Vector2(0,0), Vector2(1,0), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(0,1), Vector2(-1,0), Vector2(-1,1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(-1,0), Vector2(-1,-1)],
+        [(0,0), (0,1), (1,0), (1,1)],[(0,-1), (0,0), (1,-1), (1,0)],[(-1,0), (-1,1), (0,0), (0,1)],[(-1,-1), (-1,0), (0,-1), (0,0)],
 
         # T shape
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(1,1)],
-        [Vector2(0,0), Vector2(0,1), Vector2(1,0), Vector2(0,-1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(1,-1), Vector2(0,-2)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-1,-1), Vector2(-1,-2)],
+        [(0,0), (0,1), (0,2), (1,1)],[(0,-1), (0,0), (0,1), (1,0)],[(0,-2), (0,-1), (0,0), (1,-1)],[(-1,-2), (-1,-1), (-1,0), (0,0)],
 
-        [Vector2(0,0), Vector2(-1,1), Vector2(0,1), Vector2(1,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(0,-1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-2,0), Vector2(-1,-1)],
+        [(0,0), (-1,1), (0,1), (1,1)],[(0,0), (1,0), (2,0), (1,-1)],[(0,0), (1,0), (0,-1), (-1,0)],[(0,0), (-1,0), (-2,0), (-1,-1)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(-1,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,1), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(0,1), Vector2(0,-1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(0,-2), Vector2(-1,-1)],
+        [(0,0), (0,1), (0,2), (-1,1)],[(0,0), (1,0), (1,1), (1,-1)],[(0,0), (0,1), (0,-1), (-1,0)],[(0,0), (0,-1), (0,-2), (-1,-1)],
 
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(1,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(0,1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(-1,-1), Vector2(0,-1), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-2,0), Vector2(-1,1)],
+        [(0,0), (1,0), (2,0), (1,1)],[(0,0), (1,0), (0,1), (-1,0)],[(0,0), (-1,-1), (0,-1), (1,-1)],[(0,0), (-1,0), (-2,0), (-1,1)],
 
         # J shape 
-        [Vector2(0,0), Vector2(0,1), Vector2(-1,1), Vector2(-2,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(2,-1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,-1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-2,0), Vector2(0,-1)],
+        [(0,0), (0,1), (-1,1), (-2,1)],[(0,0), (1,0), (2,0), (2,-1)],[(0,0), (1,0), (1,-1), (-1,0)],[(0,0), (-1,0), (-2,0), (0,-1)],
 
-        [Vector2(0,0), Vector2(1,0), Vector2(1,1), Vector2(1,2)],
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(0,1), Vector2(0,-1), Vector2(-1,-1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(0,-2), Vector2(-1,-2)],
+        [(0,0), (1,0), (1,1), (1,2)],[(0,0), (0,1), (0,2), (-1,0)],[(0,0), (0,1), (0,-1), (-1,-1)],[(0,0), (0,-1), (0,-2), (-1,-2)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(1,0), Vector2(2,0)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(1,-1), Vector2(2,-1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(-1,0), Vector2(-1,1)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-2,0), Vector2(-2,1)],
+        [(0,0), (0,1), (1,0), (2,0)],[(0,0), (0,-1), (1,-1), (2,-1)],[(0,0), (1,0), (-1,0), (-1,1)],[(0,0), (-1,0), (-2,0), (-2,1)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(1,2)],
-        [Vector2(0,0), Vector2(0,1), Vector2(1,1), Vector2(0,-1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(0,-1), Vector2(0,-2)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-1,-1), Vector2(-1,-2)],
+        [(0,0), (0,1), (0,2), (1,2)],[(0,0), (0,1), (1,1), (0,-1)],[(0,0), (1,0), (0,-1), (0,-2)],[(0,0), (-1,0), (-1,-1), (-1,-2)],
 
         # L shape 
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(2,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(0,1), Vector2(-1,0), Vector2(-2,0)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(-1,-1), Vector2(-2,-1)],
+        [(0,0), (1,0), (2,0), (2,1)],[(0,0), (1,0), (1,1), (-1,0)],[(0,0), (0,1), (-1,0), (-2,0)],[(0,0), (0,-1), (-1,-1), (-2,-1)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(1,0)],
-        [Vector2(0,0), Vector2(0,1), Vector2(0,-1), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(0,-2), Vector2(1,-2)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-1,1), Vector2(-1,2)],
+        [(0,0), (0,1), (0,2), (1,0)],[(0,0), (0,1), (0,-1), (1,-1)],[(0,0), (0,-1), (0,-2), (1,-2)],[(0,0), (-1,0), (-1,1), (-1,2)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(1,1), Vector2(2,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(2,0), Vector2(0,-1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(-1,0), Vector2(-1,-1)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-2,0), Vector2(-2,-1)],
+        [(0,0), (0,1), (1,1), (2,1)],[(0,0), (1,0), (2,0), (0,-1)],[(0,0), (1,0), (-1,0), (-1,-1)],[(0,0), (-1,0), (-2,0), (-2,-1)],
 
-        [Vector2(0,0), Vector2(0,1), Vector2(0,2), Vector2(-1,2)],
-        [Vector2(0,0), Vector2(0,1), Vector2(0,-1), Vector2(-1,1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(0,-2), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,-2), Vector2(1,-1)],
+        [(0,0), (0,1), (0,2), (-1,2)],[(0,0), (0,1), (0,-1), (-1,1)],[(0,0), (0,-1), (0,-2), (-1,0)],[(0,0), (1,0), (1,-2), (1,-1)],
 
         # Z shape
-        [Vector2(0,0), Vector2(0,1), Vector2(1,1), Vector2(1,2)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,1), Vector2(0,-1)],
-        [Vector2(0,0), Vector2(0,1), Vector2(-1,0), Vector2(-1,-1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(-1,-1), Vector2(-1,-2)],
+        [(0,0), (0,1), (1,1), (1,2)],[(0,0), (1,0), (1,1), (0,-1)],[(0,0), (0,1), (-1,0), (-1,-1)],[(0,0), (0,-1), (-1,-1), (-1,-2)],
 
-        [Vector2(0,0), Vector2(1,0), Vector2(0,1), Vector2(-1,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(1,-1), Vector2(2,-1)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(0,-1), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-1,1), Vector2(-2,1)],
+        [(0,0), (1,0), (0,1), (-1,1)],[(0,0), (1,0), (1,-1), (2,-1)],[(0,0), (-1,0), (0,-1), (1,-1)],[(0,0), (-1,0), (-1,1), (-2,1)],
 
         # S shape
-        [Vector2(0,0), Vector2(0,1), Vector2(-1,1), Vector2(-1,2)],
-        [Vector2(0,0), Vector2(0,1), Vector2(1,0), Vector2(1,-1)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(1,-1), Vector2(1,-2)],
-        [Vector2(0,0), Vector2(0,-1), Vector2(-1,0), Vector2(-1,1)],
+        [(0,0), (0,1), (-1,1), (-1,2)],[(0,0), (0,1), (1,0), (1,-1)],[(0,0), (0,-1), (1,-1), (1,-2)],[(0,0), (0,-1), (-1,0), (-1,1)],
 
-        [Vector2(0,0), Vector2(1,0), Vector2(1,1), Vector2(2,1)],
-        [Vector2(0,0), Vector2(1,0), Vector2(0,-1), Vector2(-1,-1)],
-        [Vector2(0,0), Vector2(0,1), Vector2(1,1), Vector2(-1,0)],
-        [Vector2(0,0), Vector2(-1,0), Vector2(-1,-1), Vector2(-2,-1)]  
+        [(0,0), (1,0), (1,1), (2,1)],[(0,0), (1,0), (0,-1), (-1,-1)],[(0,0), (0,1), (1,1), (-1,0)],[(0,0), (-1,0), (-1,-1), (-2,-1)]  
     ]
 
+ADJACENT: list[tuple[int, int]] = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+BOARD_DIMENSION = 11
+MAX_BOARD_INDEX = 10
 CELLS = 4
-PATH_COST = 1
-ROW = 'r'
-COLUMN = 'c'
-MAX_DEPTH = 150
-FIRST_MOVES = 2
+RED = 1
+BLUE = 2
+VACANT = 0
 
-def all_possible_moves(
-    board: dict[Coord, PlayerColor],
-    depth: int,
-    color: PlayerColor
-) -> list[PlaceAction]:
-    '''
-    Function to compute list of next possible actions from current state
-    '''
-        
-    actions: list[PlaceAction] = []
+reached_opponent = False
 
-    is_first_moves = depth <= FIRST_MOVES
-
-    # Traverse empty cells ADJACENT to a red cell
-    for row in range(int(BOARD_N)):
-        for column in range(int(BOARD_N)):
-            curr_cell = Coord(row, column)
-            # First moves can be anywhere (not constrained to adjacent tile)
-            if is_first_moves:
-                actions += generate_tetrominoes(curr_cell, board)
-                continue
-            if board.get(curr_cell) == color:
-                # Generating all adjacent cells to the red cell
-                left = curr_cell.__add__(Direction.Left)
-                right = curr_cell.__add__(Direction.Right)
-                up = curr_cell.__add__(Direction.Up)
-                down = curr_cell.__add__(Direction.Down)
-                # If adjacent cell is empty, generate all possible tetrominoes that can be placed over it
-                if left not in board:
-                    actions += generate_tetrominoes(left, board)
-                if right not in board:
-                    actions += generate_tetrominoes(right, board)
-                if up not in board:
-                    actions += generate_tetrominoes(up, board)
-                if down not in board:
-                    actions += generate_tetrominoes(down, board)
-    
-    # Ensure that generated actions are unique
-    return list(set(actions))
 
 def generate_tetrominoes(
-    cell: Coord,
-    board: dict[Coord, PlayerColor]
-) -> list[PlaceAction]:
+    board: np.ndarray,
+    cell_row: int, 
+    cell_col: int
+) -> list[list[tuple[int, int]]]:
+    possible_actions = []
+    for shape in TETROMINOES:
+        tetromino = []
+        for row, col in shape:
+            new_row, new_col = get_cell_coords(row + cell_row, col + cell_col)
+            if board[new_row, new_col] != VACANT:
+                break
+            tetromino.append((new_row, new_col))
+
+        if len(tetromino) == CELLS:
+            sorted_tetromino = sorted(tetromino)
+            possible_actions.append(sorted_tetromino)
+    
+    return possible_actions
+
+
+def get_remaining_empty_tiles(
+    opponent_tiles: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    
+    return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
+
+
+
+def possible_actions(
+    board:np.ndarray, 
+    player_tiles: list[tuple[int, int]]
+) -> list[list[tuple[int, int]]]:
     '''
-    Helper function (of all_possible_moves) which helps us find all possible tetrominoes that can be placed over a given coordinate
+    Function that takes two args, a board representation, and the current player, 
+    and outputs the list of posisble actions the current player can take
     '''
     actions = []
-    for tetromino in TETROMINOES:
-        place_action = []
-        for relative_position in tetromino: 
-            # Generate tetromino cell 
-            tetromino_cell = cell.__add__(relative_position)
-            # If a cell in our tetromino is occupied, this shape is not applicable
-            if tetromino_cell in board:
-                break
-            else:
-                place_action.append(tetromino_cell)
-        # If all cells of the tetromino are unoccupied, this is a valid move
-        if len(place_action) == CELLS:
-            # Sort coordinates based on row and column index (helps us to identify duplicate PLACE actions) 
-            place_action.sort(key=lambda coord: (coord.r, coord.c))
-            actions.append(PlaceAction(place_action[0], place_action[1], place_action[2], place_action[3]))
+    empty_adjacent_tiles: list[tuple[int, int]] = get_empty_adjacent_tiles(board, player_tiles)
+    for tile in empty_adjacent_tiles:
+        actions += generate_tetrominoes(board, tile[0], tile[1])
+    
+    unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
-    return actions
+    return unique_actions
+   
+
+
+def get_cell_coords(row: int, col: int) -> tuple[int, int]:
+
+    new_row = row % BOARD_DIMENSION
+    new_col = col % BOARD_DIMENSION
+
+    return new_row, new_col
+
+
 
 def apply_move(
-    board: dict[Coord, PlayerColor],
-    move: PlaceAction,
-    player: PlayerColor
-) -> dict[Coord, PlayerColor]: 
-    '''
-    Helper function to update board with new action, and clear rows/columns if necessary
-    '''
-    new_board = {key: value for key, value in board.items()}
+    board: np.ndarray, 
+    color: PlayerColor=None, 
+    place_action: PlaceAction=None, 
+    make_copy: bool = False, 
+    place_action_list: list[tuple[int, int]] = None,
+    color_int: int = 0
+) -> np.ndarray:
 
-    new_board[move.c1] = new_board[move.c2] = new_board[move.c3] = new_board[move.c4] = player
-    count_row = 0
-    count_column = 0
-    clear_rows = []
-    clear_columns = []
-    # Check if a row/column needs to be cleared
-    for row in range(int(BOARD_N)):
-        count_row = 0
-        count_column = 0
-        for column in range(int(BOARD_N)):
-            if Coord(row, column) in new_board:
-                count_row += 1
-            if Coord(column, row) in new_board:
-                count_column += 1
-        if count_row == BOARD_N:
-            clear_rows.append(row)
-        if count_column == BOARD_N:
-            clear_columns.append(row)
+    board_ref = deepcopy(board) if make_copy else board # make copy of board if necessary
 
-    for row in clear_rows:
-        new_board = {coord: player for coord, player in new_board.items() if coord.r != row}
-    for column in clear_columns:
-        new_board = {coord: player for coord, player in new_board.items() if coord.c != column}
+    player = color_int
+    if color:
+        player = RED if color == PlayerColor.RED else BLUE
 
-    return new_board
+    action_as_list = convert_to_tuple_list(place_action) if place_action_list is None else place_action_list
 
-def is_terminal_state(
-    board: dict[Coord, PlayerColor],
-    color: PlayerColor,
-    depth: int
-) -> bool:
-    if depth == MAX_DEPTH:
-        return True
+    rows = [rows for rows, _ in action_as_list]
+    cols = [cols for _, cols in action_as_list]
+
+    board_ref[action_as_list[0][0], action_as_list[0][1]] = board_ref[action_as_list[1][0], action_as_list[1][1]] = \
+        board_ref[action_as_list[2][0], action_as_list[2][1]] = board_ref[action_as_list[3][0], action_as_list[3][1]] = player
+
+    # Now make sure each row/col that is fully filled up, is cleared out 
+    clear_out_row = []
+    clear_out_col = []
+    count_zeroes = 0
+    for row in rows:
+        count_zeroes = np.count_nonzero(board_ref[row, :] == VACANT)
+        if count_zeroes == 0:
+            clear_out_row.append(row)
+
+    for col in cols:
+        count_zeroes = np.count_nonzero(board_ref[:, col] == VACANT)
+        if count_zeroes == 0:
+            clear_out_col.append(col)
+
+    # Now clear out rows and columns
+    for row in clear_out_row:
+        board_ref[row, :] = VACANT
+
+    for col in clear_out_col:
+        board_ref[:, col] = VACANT
+
+    return board_ref
     
-    if depth <= FIRST_MOVES:
-        return False
-    
-    # Traverse empty cells ADJACENT to a red cell
-    for row in range(int(BOARD_N)):
-        for column in range(int(BOARD_N)):
-            curr_cell = Coord(row, column)
-            if board.get(curr_cell) == color:
-                # Generating all adjacent cells to the red cell
-                left = curr_cell.__add__(Direction.Left)
-                right = curr_cell.__add__(Direction.Right)
-                up = curr_cell.__add__(Direction.Up)
-                down = curr_cell.__add__(Direction.Down)
-                # If adjacent cell is empty, generate all possible tetrominoes that can be placed over it
-                if left not in board:
-                    if moves_on_cell(left, board):
-                        return False
-                if right not in board:
-                    if moves_on_cell(right, board):
-                        return False
-                if up not in board:
-                    if moves_on_cell(up, board):
-                        return False
-                if down not in board:
-                    if moves_on_cell(down, board):
-                        return False
-    return True
 
-def moves_on_cell(
-    cell: Coord,
-    board: dict[Coord, PlayerColor]
-) -> bool:
-    for tetromino in TETROMINOES:
-        place_action = []
-        for relative_position in tetromino: 
-            # Generate tetromino cell 
-            tetromino_cell = cell.__add__(relative_position)
-            # If a cell in our tetromino is occupied, this shape is not applicable
-            if tetromino_cell in board:
-                break
+def convert_to_tuple_list(
+    place_action: PlaceAction
+) -> list[tuple[int, int]]:
+    
+    cell1 = (place_action.c1.r, place_action.c1.c)
+    cell2 = (place_action.c2.r, place_action.c2.c)
+    cell3 = (place_action.c3.r, place_action.c3.c)
+    cell4 = (place_action.c4.r, place_action.c4.c)
+
+    return [cell1, cell2, cell3, cell4]
+
+def convert_to_place_action(
+    action: list[tuple[int, int]]
+) -> PlaceAction:
+    coord1 = Coord(action[0][0], action[0][1])
+    coord2 = Coord(action[1][0], action[1][1])
+    coord3 = Coord(action[2][0], action[2][1])
+    coord4 = Coord(action[3][0], action[3][1])
+
+    return PlaceAction(coord1, coord2, coord3, coord4)
+
+
+
+def get_empty_adjacent_tiles(
+    board: np.ndarray, 
+    player_tiles: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    
+    empty_adjacent: list[tuple[int, int]] = []
+    for (row, col) in player_tiles:
+        for adjacent in ADJACENT:
+            new_row, new_col = get_cell_coords(row + adjacent[0], col + adjacent[1])
+            # Adjacent tile must be empty 
+            if board[new_row, new_col] == VACANT:
+                empty_adjacent.append((new_row, new_col))
+    
+    return list(set(empty_adjacent))
+
+
+def get_random_initial_action(board:np.ndarray) -> PlaceAction:
+
+    x = randint(0, 9)
+    y = randint(0, 9)
+    relative_positions: list[tuple[int, int]] = choice(TETROMINOES)
+
+    temp: list[tuple[int, int]] = []
+
+    for position in relative_positions:
+        new_row, new_col = get_cell_coords(x + position[0], y + position[1])
+        temp.append((new_row, new_col))
+
+    # If there are conflicts, shift the entire randomly generated tetromino 4 cells to the right
+    position_index = 0
+    if (board[temp[0][0], temp[0][1]] != VACANT) or (board[temp[1][0], temp[1][1]] != VACANT) or \
+        (board[temp[2][0], temp[2][1]] != VACANT) or (board[temp[3][0], temp[3][1]] != VACANT):
+        for position in temp:
+            temp_row, temp_col = get_cell_coords(position[0] + CELLS, position[1])
+            temp[position_index] = (temp_row, temp_col)
+            position_index += 1
+
+    return convert_to_place_action(temp)
+
+def render(board: np.ndarray, use_color: bool=False, use_unicode: bool=False) -> str:
+    """
+    FOR DEBUGGING
+    Returns a visualisation of the game board as a multiline string, with
+    optional ANSI color codes and Unicode characters (if applicable).
+    """
+    def apply_ansi(str, bold=True, color=None):
+        bold_code = "\033[1m" if bold else ""
+        color_code = ""
+        if color == "r":
+            color_code = "\033[31m"
+        if color == "b":
+            color_code = "\033[34m"
+        return f"{bold_code}{color_code}{str}\033[0m"
+
+    output = ""
+    for r in range(11):
+        for c in range(11):
+            if board[r, c] != 0:
+                color: PlayerColor = PlayerColor.RED if board[r,c] == RED else PlayerColor.BLUE
+                color = "r" if color == PlayerColor.RED else "b"
+                text = f"{color}"
+                if use_color:
+                    output += apply_ansi(text, color=color, bold=False)
+                else:
+                    output += text
             else:
-                place_action.append(tetromino_cell)
-        # If all cells of the tetromino are unoccupied, this is a valid move
-        if len(place_action) == CELLS:
-            return True
-
-    return False
-
-
-def count_colors(
-    board: dict[Coord, PlayerColor],
-    color: PlayerColor
-) -> int:
-    count = 0
-    for key in board:
-        if board[key] == color:
-            count += 1
-    
-    return count
+                output += "."
+            output += " "
+        output += "\n"
+    return output

@@ -3,7 +3,7 @@ from referee.game import PlayerColor, PlaceAction
 from copy import deepcopy
 import numpy as np
 
-CUTOFF_DEPTH = 5
+CUTOFF_DEPTH = 4
 # In the context of chess: 4-ply lookahead is very average. Try to get to 5. 
 
 class MiniMaxNode:
@@ -14,10 +14,9 @@ class MiniMaxNode:
         state: np.ndarray, 
         depth: int, 
         root_colour: int, 
-        opponent_tiles:list[tuple[int, int]], # Knowing where opponent tiles are will help the maximising determine which child nodes to explore 
-        player_tiles: list[tuple[int, int]], # Contrastingly, knowing where (root) player tiles are will help the minimising player
         parent=None, 
-        parent_action: list[tuple[int, int]]=None
+        parent_action: list[tuple[int, int]]=None,
+        weight: int = 0
     ):
         self.color: int = color
         self.state: np.ndarray = state
@@ -27,8 +26,7 @@ class MiniMaxNode:
         self.depth: int = depth
         self.value: int = 0
         self.root_colour: int = root_colour
-        self.opponent_tiles = opponent_tiles 
-        self.player_tiles = player_tiles
+        self.weight = weight
         return
 
 
@@ -59,10 +57,7 @@ def evaluation(
 def get_minimax_action(
     state: np.ndarray, 
     depth: int, 
-    current_player: PlayerColor, 
-    opponent_occupied: list[tuple[int, int]],
-    player_occupied: list[tuple[int, int]],
-    is_first_action: bool = False
+    current_player: PlayerColor
 ) -> PlaceAction:
 
     # initialise root node
@@ -73,13 +68,18 @@ def get_minimax_action(
         color=opponent_player, 
         state=state, 
         depth=root_depth, 
-        root_colour=root_player, 
-        opponent_tiles=player_occupied, 
-        player_tiles=opponent_occupied
+        root_colour=root_player
     )
-    root_node.children = init_children(root_node, is_first_action)
+    root_node.children = init_children(root_node)
 
-    max_val = minimax(node=root_node, alpha=float('-inf'), beta=float('inf'), is_max=True, explore_depth=CUTOFF_DEPTH)
+    depth = CUTOFF_DEPTH
+    num_children = len(root_node.children)
+    if num_children > 200:
+        depth = 1
+    elif num_children > 20:
+        depth = 2
+
+    max_val = minimax(node=root_node, alpha=float('-inf'), beta=float('inf'), is_max=True, explore_depth=depth)
 
     action: list[tuple[int, int]] = []
     # Look for children with that maximum value
@@ -94,12 +94,11 @@ def get_minimax_action(
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int):
     
     if explore_depth == 0:
-        eval = evaluation(node)
-        return eval
+        return node.weight
     
     if is_terminal_state(board=node.state, depth=node.depth, color=node.color) and node.depth > 2:
         if node.depth == MAX_DEPTH:
-            return evaluation(node)
+            return node.weight
         
         # Check if our player was the one that made the last move 
         if node.root_colour == node.color:
@@ -113,9 +112,10 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         # If we have no yet generated its children, do so now
         if not node.children:
             node.children = init_children(node)
-        # print("Depth: " + str(node.depth ) + ", num children: " + str(len(node.children)))
+        # print("Depth: " + str(node.depth) + ", num children: " + str(len(node.children)))
         for child in node.children:
             child.value = minimax(child, alpha, beta, False, explore_depth - 1)
+            # print("Child depth: " + str(child.depth) + ", eval" + str(child.value))
             max_eval = max(max_eval, child.value)
             alpha = max(alpha, child.value)
             if beta <= alpha:
@@ -132,6 +132,7 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         # print(render(node.state, True))
         for child in node.children:
             child.value = minimax(child, alpha, beta, True, explore_depth - 1)
+            # print("Child depth: " + str(child.depth) + ", eval" + str(child.value))
             min_eval = min(min_eval, child.value)
             beta = min(beta, child.value)
             if beta <= alpha:
@@ -141,34 +142,22 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         return min_eval
 
 
-def init_children(node: MiniMaxNode, is_first_action: bool = False):
+def init_children(node: MiniMaxNode):
 
     children: list[MiniMaxNode] = []
     child_depth: int = node.depth + 1
     child_player: int = BLUE if node.color == RED else RED
 
-    actions: list[list[tuple[int, int]]] = possible_actions(node.state, child_player, node.player_tiles, node.opponent_tiles, is_first_action)
+    actions: list[tuple[list[tuple[int, int]], np.ndarray, int]] = possible_actions(node.state, child_player)
     for action in actions:
-        player_occupied = deepcopy(node.opponent_tiles)
-        player_occupied += action
-        opponent_occupied = deepcopy(node.player_tiles)
         new_node = MiniMaxNode(
             color=child_player, 
-            state=apply_move(
-                board=node.state, 
-                color=None, 
-                place_action=None, 
-                place_action_list=action, 
-                color_as_int=child_player, 
-                opponent_tiles=opponent_occupied, 
-                player_tiles=player_occupied
-            ), 
+            state=action[1],
             depth=child_depth, 
-            root_colour=node.root_colour, 
-            opponent_tiles=player_occupied, 
-            player_tiles=opponent_occupied, 
+            root_colour=node.root_colour,
             parent=node, 
-            parent_action=action
+            parent_action=action[0],
+            weight=action[2]
         )
         children.append(new_node)
     return children
