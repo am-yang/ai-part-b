@@ -76,8 +76,10 @@ def get_minimax_action(
     num_children = len(root_node.children)
     if num_children > 200:
         depth = 1
-    elif num_children > 20:
+    elif num_children > 50:
         depth = 2
+    elif num_children > 20:
+        depth = 3
 
     max_val = minimax(node=root_node, alpha=float('-inf'), beta=float('inf'), is_max=True, explore_depth=depth)
 
