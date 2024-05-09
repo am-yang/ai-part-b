@@ -23,8 +23,6 @@ class Agent:
         self.color_int = RED if color == PlayerColor.RED else BLUE
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
-        self.opponent_tiles: list[tuple[int, int]] = [] # NEW
-        self.player_tiles: list[tuple[int, int]] = [] # Also new
 
     def action(self, **referee: dict) -> Action:
         """
@@ -44,11 +42,6 @@ class Agent:
     def update(self, color: PlayerColor, action: Action, **referee: dict):
 
         place_action: PlaceAction = action
-        if self._color != color:
-            self.opponent_tiles += convert_to_tuple_list(action)
-        else:
-            self.player_tiles += convert_to_tuple_list(action)
-
         self.total_moves += 1
         self.board = apply_move(
             board=self.board, 
