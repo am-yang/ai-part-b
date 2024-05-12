@@ -30,30 +30,6 @@ class MiniMaxNode:
         return
 
 
-def evaluation(
-    node: MiniMaxNode
-) -> int:
-    
-    opponent_color = BLUE if node.root_colour == RED else RED
-    
-    if node.depth == MAX_DEPTH:
-
-        opponent_occupied = node.opponent_tiles if node.color == node.root_colour else node.player_tiles
-        count_opponent_tiles = len(opponent_occupied)
-
-        if count_opponent_tiles > 75:
-            return float('-inf')
-        elif count_opponent_tiles < 75: 
-            return float('inf')
-        else: 
-            return 0
-        
-    empty_opponent_tiles = get_empty_adjacent_tiles(node.state, opponent_color)
-    return -1 * len(empty_opponent_tiles)
-    # opponent_action = possible_actions(node.state, opponent_color, node.opponent_tiles, node.player_tiles, True)
-    # return -1 * len(opponent_action)
-
-
 def get_minimax_action(
     state: np.ndarray, 
     depth: int, 
@@ -75,9 +51,9 @@ def get_minimax_action(
     depth = CUTOFF_DEPTH
     num_children = len(root_node.children)
     if num_children > 200:
-        depth = 1
-    elif num_children > 50:
         depth = 2
+    # elif num_children > 50:
+    #     depth = 2
     elif num_children > 20:
         depth = 3
 

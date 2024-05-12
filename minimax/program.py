@@ -23,6 +23,8 @@ class Agent:
         self.color_int = RED if color == PlayerColor.RED else BLUE
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
+        # Storing a transposition table for boards we have visited before 
+        self.transposition_table: dict[bytes, tuple[int, list[tuple[int, int]]]] = {}
 
     def action(self, **referee: dict) -> Action:
         """

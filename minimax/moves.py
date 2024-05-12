@@ -58,6 +58,7 @@ BOARD_DIMENSION = 11
 MAX_BOARD_INDEX = 10
 MAX_EMPTY_ADJACENT = 10
 CELLS = 4
+SHIFT = 5
 MAX_DEPTH = 150
 RED = 1
 BLUE = 2
@@ -284,7 +285,7 @@ def get_random_initial_action(
         (board[action[2][0], action[2][1]] != VACANT) or (board[action[3][0], action[3][1]] != VACANT) or \
         adjacent_to_opponent(board, action, opponent_color):
         for cell in range(CELLS):
-            new_row, new_col = get_cell_coords(action[cell][0] + CELLS, action[cell][1] + CELLS)
+            new_row, new_col = get_cell_coords(action[cell][0] + SHIFT, action[cell][1] + SHIFT)
             action[cell] = (new_row, new_col)
 
     return convert_to_place_action(action)
