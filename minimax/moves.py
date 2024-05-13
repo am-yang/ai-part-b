@@ -2,6 +2,7 @@ import numpy as np
 from random import choice, randint
 from referee.game import PlaceAction, PlayerColor
 from referee.game.coord import Coord
+import hashlib
 
 
 # Initialise board
@@ -74,11 +75,22 @@ def get_remaining_empty_tiles(
     return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
 
 
+def count_tiles(
+    board: np.ndarray, 
+    player: int
+) -> int:
+    count = 0
+    for row in range(BOARD_DIMENSION):
+        for col in range(BOARD_DIMENSION):
+            if board[row, col] == player:
+                count += 1
+    return count
+
 
 def possible_actions(
     board:np.ndarray, 
     color:int
-) -> list[tuple[list[tuple[int, int]], np.ndarray, int]]:
+) -> list[tuple[list[tuple[int, int]], np.ndarray, int, str]]:
     '''
     Function that takes two args, a board representation, and the current player, 
     and outputs the list of posisble actions the current player can take
@@ -91,16 +103,19 @@ def possible_actions(
     unique_actions: list[list[tuple[int, int]]] = [list(action) for action in set(tuple(action) for action in actions)]
 
     # Group action with a specific ranking (AKA weight). Hence, our ranking list will contain elements of the form: (ranking, action, applied action state)
-    children_ranking: list[tuple[tuple[int, int], list[tuple[int, int]], np.ndarray]] = []
+    children_ranking: list[tuple[tuple[int, int], list[tuple[int, int]], np.ndarray, str]] = []
 
     for action in unique_actions:
         action_applied_board = apply_move(board=board, place_action=None, color=None, place_action_list=action, color_as_int=color)
+        # Generating hash representation of board for caching purposes
+        board_to_bytes = action_applied_board.tobytes()
+        board_hash = hashlib.md5(board_to_bytes).hexdigest()
         ranking = rank_child(action, action_applied_board, color)
-        children_ranking.append((ranking, action, action_applied_board))
+        children_ranking.append((ranking, action, action_applied_board, board_hash))
 
     children_ranking = sorted(children_ranking)
 
-    sorted_actions = [(action, state, -1 * (ranking[0] + ranking[1])) for (ranking, action, state) in children_ranking]
+    sorted_actions = [(action, state, -1 * (ranking[0] + ranking[1]), hash) for (ranking, action, state, hash) in children_ranking]
     return sorted_actions
 
 

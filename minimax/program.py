@@ -3,10 +3,10 @@
 
 from referee.game import PlayerColor, Action, PlaceAction
 from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, RED, BLUE, possible_actions, convert_to_place_action, render
-from .minimax_basic import get_minimax_action
+from .minimax_basic import get_minimax_action, MiniMaxNode, init_children
 from random import choice
 import numpy as np
-
+import hashlib
 
 class Agent:
     """
@@ -23,14 +23,11 @@ class Agent:
         self.color_int = RED if color == PlayerColor.RED else BLUE
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
-        # Storing a transposition table for boards we have visited before 
-        self.transposition_table: dict[bytes, tuple[int, list[tuple[int, int]]]] = {}
+        # Storing the tree so that we don't create the children that we have already created
+        self.tree: MiniMaxNode = None
 
     def action(self, **referee: dict) -> Action:
-        """
-        This method is called by the referee each time it is the agent's turn
-        to take an action. It must always return an action object. 
-        """
+        # First two moves of the game are arbitrary 
         if self.total_moves == 1:
             return get_random_initial_action(self.board)
         
@@ -38,8 +35,26 @@ class Agent:
             opponent_color = BLUE if self.color_int == RED else RED
             return get_random_initial_action(self.board, opponent_color, False)
         
-        return get_minimax_action(self.board, self.total_moves, self._color)
-
+        # Moves from step 3 onwards are all minimax-generated 
+        elif self.total_moves == 3:
+            # initialise root node
+            self.tree = generate_node(self)
+            self.tree = get_minimax_action(self.tree)
+        
+            return convert_to_place_action(self.tree.parent_action)
+        
+        # else:
+        #     # Convert board to hash and see if we have already generated it
+        #     if self.tree.children:
+        #         board_to_bytes = self.board.tobytes()
+        #         board_hash = hashlib.md5(board_to_bytes).hexdigest()
+        #         self.tree = self.tree.children[board_hash]
+        #     else:
+        #         self.tree = generate_node(self)
+            
+        #     self.tree = get_minimax_action(self.tree)
+        #     return convert_to_place_action(self.tree.parent_action)
+                 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
 
@@ -54,3 +69,15 @@ class Agent:
         )
 
 
+def generate_node(agent: Agent) -> MiniMaxNode:
+    # initialise root node
+    root_player = agent.color_int
+    opponent_player = BLUE if agent.color_int == RED else RED
+    root_depth = agent.total_moves - 1
+    root_node = MiniMaxNode(
+        color=opponent_player, 
+        state=agent.board, 
+        depth=root_depth, 
+        root_colour=root_player
+    )
+    return root_node
