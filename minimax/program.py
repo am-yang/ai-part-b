@@ -3,7 +3,7 @@
 
 from referee.game import PlayerColor, Action, PlaceAction
 from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, RED, BLUE, possible_actions, convert_to_place_action, render
-from .minimax_basic import get_minimax_action, MiniMaxNode, init_children
+from .minimax_basic import get_minimax_action, MiniMaxNode, init_children, MAX_TIME
 from random import choice
 import numpy as np
 import hashlib
@@ -26,6 +26,7 @@ class Agent:
         self.board = np.zeros((11, 11), dtype=int)
         # Storing the tree so that we don't create the children that we have already created
         self.tree: MiniMaxNode = None
+        self.allowed_time: float = MAX_TIME
 
     def action(self, **referee: dict) -> Action:
         # First two moves of the game are arbitrary 
@@ -53,7 +54,8 @@ class Agent:
             else:
                 self.tree = generate_node(self)
             
-            self.tree = get_minimax_action(self.tree)
+            self.tree, leftover_time = get_minimax_action(self.tree, self.allowed_time)  
+            self.allowed_time = MAX_TIME + leftover_time          
             return convert_to_place_action(self.tree.parent_action)
 
 

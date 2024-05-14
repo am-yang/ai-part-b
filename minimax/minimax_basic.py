@@ -3,6 +3,7 @@ import numpy as np
 import time
 
 MAX_TIME = 2.4
+GREEDY_DEPTH = 1
 
 class MiniMaxNode:
 
@@ -29,19 +30,21 @@ class MiniMaxNode:
 
 
 def get_minimax_action(
-    root_node: MiniMaxNode
-) -> MiniMaxNode:
+    root_node: MiniMaxNode,
+    allowed_time: float
+) -> tuple[MiniMaxNode, float]:
 
     # Start timer 
     start_time = time.time()
+    elapsed_time = 0
     
     if root_node.children is None:
         root_node.children = init_children(root_node)
 
     depth = MAX_DEPTH + 1
-    # num_children = len(root_node.children)
-    # if num_children > 200:
-    #     depth = 1
+    num_children = len(root_node.children)
+    if num_children > 200:
+        depth = GREEDY_DEPTH + 1
 
     # Perform iterative deepening 
     for curr_depth in range(1, depth):
@@ -51,21 +54,22 @@ def get_minimax_action(
             beta=float('inf'), 
             is_max=True, 
             explore_depth=curr_depth,
-            start_time=start_time
+            start_time=start_time,
+            allowed_time=allowed_time
         )
         elapsed_time = time.time() - start_time
-        if elapsed_time >= MAX_TIME:
-            print("max depth reached: " + str(curr_depth))
+        if elapsed_time >= allowed_time:
             break
-        
+    
+    leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0
 
     # Look for children with that maximum value
     for child in root_node.children:
         if child.value == max_value:
-            return child
+            return child, leftover_time
     
 
-def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float):
+def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
     
     # Prioritise terminal state computation because this will provide most robust information about current game state 
     if is_terminal_state(board=node.state, depth=node.depth, color=node.color):
@@ -95,11 +99,11 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
             node.children = init_children(node)
             
         for child in node.children:
-            child.value = minimax(child, alpha, beta, False, explore_depth - 1, start_time)
+            child.value = minimax(child, alpha, beta, False, explore_depth - 1, start_time, allowed_time)
             max_eval = max(max_eval, child.value)
             alpha = max(alpha, child.value)
             elapsed_time = time.time() - start_time
-            if beta <= alpha or elapsed_time >= MAX_TIME:
+            if beta <= alpha or elapsed_time >= allowed_time:
                 break 
         node.value = max_eval
         return max_eval
@@ -110,11 +114,11 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         if not node.children:
             node.children = init_children(node)
         for child in node.children:
-            child.value = minimax(child, alpha, beta, True, explore_depth - 1, start_time)
+            child.value = minimax(child, alpha, beta, True, explore_depth - 1, start_time, allowed_time)
             min_eval = min(min_eval, child.value)
             beta = min(beta, child.value)
             elapsed_time = time.time() - start_time
-            if beta <= alpha or elapsed_time >= MAX_TIME:
+            if beta <= alpha or elapsed_time >= allowed_time:
                 break
         
         node.value = min_eval
