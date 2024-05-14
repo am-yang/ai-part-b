@@ -37,7 +37,7 @@ class Agent:
             return get_random_initial_action(self.board, opponent_color, False)
         
         # Moves from step 3 onwards are all minimax-generated        
-        elif self.total_moves == 3:
+        else:
             if self.tree and self.tree.children:
                 # Convert board to hash and see if we have already generated it
                 board_to_bytes = self.board.tobytes()

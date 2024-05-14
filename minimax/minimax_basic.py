@@ -55,6 +55,7 @@ def get_minimax_action(
         )
         elapsed_time = time.time() - start_time
         if elapsed_time >= MAX_TIME:
+            print("max depth reached: " + str(curr_depth))
             break
         
 

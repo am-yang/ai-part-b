@@ -10,8 +10,8 @@ import hashlib
 start = time.perf_counter()
 
 agent = Agent(PlayerColor.RED)
+agent.board[3,3] = agent.board[3,4] = agent.board[3,5] = agent.board[2,4] = 1
 agent.board[6,5] = agent.board[7,5] = agent.board[8,4] = agent.board[8,5] = 2
-agent.board[4,3] = agent.board[5,3] = agent.board[6,3] = agent.board[6,4] = 1
 
 agent.tree = generate_node(agent)
 agent.tree.children = init_children(agent.tree)
