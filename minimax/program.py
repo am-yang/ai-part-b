@@ -8,6 +8,7 @@ from random import choice
 import numpy as np
 import hashlib
 
+
 class Agent:
     """
     This class is the "entry point" for your agent, providing an interface to
@@ -35,26 +36,26 @@ class Agent:
             opponent_color = BLUE if self.color_int == RED else RED
             return get_random_initial_action(self.board, opponent_color, False)
         
-        # Moves from step 3 onwards are all minimax-generated 
+        # Moves from step 3 onwards are all minimax-generated        
         elif self.total_moves == 3:
-            # initialise root node
-            self.tree = generate_node(self)
-            self.tree = get_minimax_action(self.tree)
-        
-            return convert_to_place_action(self.tree.parent_action)
-        
-        # else:
-        #     # Convert board to hash and see if we have already generated it
-        #     if self.tree.children:
-        #         board_to_bytes = self.board.tobytes()
-        #         board_hash = hashlib.md5(board_to_bytes).hexdigest()
-        #         self.tree = self.tree.children[board_hash]
-        #     else:
-        #         self.tree = generate_node(self)
+            if self.tree and self.tree.children:
+                # Convert board to hash and see if we have already generated it
+                board_to_bytes = self.board.tobytes()
+                board_hash = hashlib.md5(board_to_bytes).hexdigest()
+                # Convert each child board to hash and compare with current board state
+                for child in self.tree.children:
+                    child_board_to_bytes = child.state.tobytes()
+                    child_board_hash = hashlib.md5(child_board_to_bytes).hexdigest()
+                    # If found, this means we have a whole tree already generated (don't need to create a new one)
+                    if board_hash == child_board_hash:
+                        self.tree = child
+                        break
+            else:
+                self.tree = generate_node(self)
             
-        #     self.tree = get_minimax_action(self.tree)
-        #     return convert_to_place_action(self.tree.parent_action)
-                 
+            self.tree = get_minimax_action(self.tree)
+            return convert_to_place_action(self.tree.parent_action)
+
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
 

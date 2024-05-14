@@ -2,7 +2,6 @@ import numpy as np
 from random import choice, randint
 from referee.game import PlaceAction, PlayerColor
 from referee.game.coord import Coord
-import hashlib
 
 
 # Initialise board
@@ -74,7 +73,6 @@ def get_remaining_empty_tiles(
     
     return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
 
-
 def count_tiles(
     board: np.ndarray, 
     player: int
@@ -85,7 +83,6 @@ def count_tiles(
             if board[row, col] == player:
                 count += 1
     return count
-
 
 def possible_actions(
     board:np.ndarray, 
@@ -107,15 +104,13 @@ def possible_actions(
 
     for action in unique_actions:
         action_applied_board = apply_move(board=board, place_action=None, color=None, place_action_list=action, color_as_int=color)
-        # Generating hash representation of board for caching purposes
-        board_to_bytes = action_applied_board.tobytes()
-        board_hash = hashlib.md5(board_to_bytes).hexdigest()
+        board_as_bytes = action_applied_board.tobytes()
         ranking = rank_child(action, action_applied_board, color)
-        children_ranking.append((ranking, action, action_applied_board, board_hash))
+        children_ranking.append((ranking, action, action_applied_board))
 
     children_ranking = sorted(children_ranking)
 
-    sorted_actions = [(action, state, -1 * (ranking[0] + ranking[1]), hash) for (ranking, action, state, hash) in children_ranking]
+    sorted_actions = [(action, state, -1 * (ranking[0] + ranking[1])) for (ranking, action, state) in children_ranking]
     return sorted_actions
 
 
@@ -281,8 +276,8 @@ def get_random_initial_action(
     x = randint(0, 10)
     y = randint(0, 10)
 
-    # Only choose from the pool of tetromino shapes with maximum surface area (i.e., I-shape)
-    random_position = randint(0, 7)
+    # Choose from pool of tetromino shapes that take up at least 2 rows/columns (exclude the I shape)
+    random_position = randint(8, 75)
     relative_positions = TETROMINOES[random_position]
 
     action: list[tuple[int, int]] = []
