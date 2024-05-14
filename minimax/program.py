@@ -68,7 +68,8 @@ class Agent:
             color=color, 
             place_action=place_action, 
             place_action_list=None, 
-            color_as_int=None
+            color_as_int=None,
+            make_copy=False
         )
 
 

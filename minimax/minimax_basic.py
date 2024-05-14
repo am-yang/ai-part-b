@@ -58,7 +58,8 @@ def get_minimax_action(
             allowed_time=allowed_time
         )
         elapsed_time = time.time() - start_time
-        if elapsed_time >= allowed_time:
+        # If we have run out of time or current move reaches a terminal state 
+        if elapsed_time >= allowed_time or max_value == float('inf'):
             break
     
     leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0

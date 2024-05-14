@@ -183,10 +183,11 @@ def apply_move(
     color: PlayerColor = None, 
     place_action: PlaceAction = None, 
     place_action_list: list[tuple[int, int]] = None,
-    color_as_int: int = 0
+    color_as_int: int = 0,
+    make_copy: bool = True
 ) -> np.ndarray:
 
-    board_ref = np.copy(board)
+    board_ref = np.copy(board) if make_copy else board
     
     player = color_as_int
     if color:
