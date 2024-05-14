@@ -5,7 +5,6 @@ from referee.game import PlayerColor, Action, PlaceAction
 from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, RED, BLUE, possible_actions, convert_to_place_action, render
 from .minimax_basic import get_minimax_action, MiniMaxNode, init_children, MAX_TIME
 import numpy as np
-import hashlib
 
 
 class Agent:
@@ -24,12 +23,12 @@ class Agent:
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
         # Storing the tree so that we don't create the children that we have already created
-        self.tree: MiniMaxNode = None
+        self.tree: MiniMaxNode = MiniMaxNode(color=BLUE if color == PlayerColor.RED else RED, state=self.board, depth=0, root_colour=self.color_int)
         self.allowed_time: float = MAX_TIME
 
     def action(self, **referee: dict) -> Action:
         # First two moves of the game are arbitrary 
-        # print(referee)
+        print(referee)
         if self.total_moves == 1:
             return get_random_initial_action(self.board)
         
@@ -41,15 +40,12 @@ class Agent:
         else:
             if self.tree and self.tree.children:
                 # Convert board to hash and see if we have already generated it
-                board_to_bytes = self.board.tobytes()
-                board_hash = hashlib.md5(board_to_bytes).hexdigest()
-                # print(board_hash)
+                board_to_string = np.array2string(self.board)
                 # Convert each child board to hash and compare with current board state
                 for child in self.tree.children:
-                    child_board_to_bytes = child.state.tobytes()
-                    child_board_hash = hashlib.md5(child_board_to_bytes).hexdigest()
+                    child_board_to_string = np.array2string(child.state)
                     # If found, this means we have a whole tree already generated (don't need to create a new one)
-                    if board_hash == child_board_hash:
+                    if board_to_string == child_board_to_string:
                         self.tree = child
                         break
             else:

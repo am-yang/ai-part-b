@@ -71,8 +71,10 @@ def get_minimax_action(
     
 
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
+
+    if explore_depth == 0:
+        return node.weight
     
-    # Prioritise terminal state computation because this will provide most robust information about current game state 
     if is_terminal_state(board=node.state, depth=node.depth, color=node.color):
         if node.depth == MAX_DEPTH:
             count_root = count_tiles(node.state, node.root_colour)
@@ -88,9 +90,6 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
             return float('inf')
         
         return float('-inf')
-    
-    if explore_depth == 0:
-        return node.weight
     
     if is_max:
         max_eval = float('-inf')
