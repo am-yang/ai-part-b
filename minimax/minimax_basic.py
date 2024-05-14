@@ -96,7 +96,7 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
         max_eval = float('-inf')
         
         # If we have no yet generated its children, do so now
-        if not node.children:
+        if node.children is None:
             node.children = init_children(node)
             
         for child in node.children:
@@ -112,7 +112,7 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
     else:
         min_eval = float('inf')
 
-        if not node.children:
+        if node.children is None:
             node.children = init_children(node)
         for child in node.children:
             child.value = minimax(child, alpha, beta, True, explore_depth - 1, start_time, allowed_time)

@@ -4,7 +4,6 @@
 from referee.game import PlayerColor, Action, PlaceAction
 from .moves import apply_move, get_random_initial_action, convert_to_tuple_list, RED, BLUE, possible_actions, convert_to_place_action, render
 from .minimax_basic import get_minimax_action, MiniMaxNode, init_children, MAX_TIME
-from random import choice
 import numpy as np
 import hashlib
 
@@ -30,6 +29,7 @@ class Agent:
 
     def action(self, **referee: dict) -> Action:
         # First two moves of the game are arbitrary 
+        # print(referee)
         if self.total_moves == 1:
             return get_random_initial_action(self.board)
         
@@ -43,6 +43,7 @@ class Agent:
                 # Convert board to hash and see if we have already generated it
                 board_to_bytes = self.board.tobytes()
                 board_hash = hashlib.md5(board_to_bytes).hexdigest()
+                # print(board_hash)
                 # Convert each child board to hash and compare with current board state
                 for child in self.tree.children:
                     child_board_to_bytes = child.state.tobytes()
@@ -56,6 +57,7 @@ class Agent:
             
             self.tree, leftover_time = get_minimax_action(self.tree, self.allowed_time)  
             self.allowed_time = MAX_TIME + leftover_time          
+            
             return convert_to_place_action(self.tree.parent_action)
 
 
