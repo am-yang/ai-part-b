@@ -1,8 +1,12 @@
 from .moves import MAX_DEPTH, RED , BLUE, possible_actions, is_terminal_state, count_tiles
 import numpy as np
 import time
+import tracemalloc
+import os
+import linecache
 
 MAX_TIME = 2.4
+MAX_TRAVERSAL_DEPTH = 4
 GREEDY_DEPTH = 1
 
 class MiniMaxNode:
@@ -36,40 +40,35 @@ def get_minimax_action(
 
     # Start timer 
     start_time = time.time()
-    elapsed_time = 0
     
     if root_node.children is None:
         root_node.children = init_children(root_node)
 
-    depth = MAX_DEPTH + 1
+    depth = MAX_DEPTH
     num_children = len(root_node.children)
-    if num_children > 200:
-        depth = GREEDY_DEPTH + 1
-
+    if num_children > 300:
+        depth = GREEDY_DEPTH
+        
     # Perform iterative deepening 
-    for curr_depth in range(1, depth):
-        max_value = minimax(
-            node=root_node, 
-            alpha=float('-inf'), 
-            beta=float('inf'), 
-            is_max=True, 
-            explore_depth=curr_depth,
-            start_time=start_time,
-            allowed_time=allowed_time
-        )
-        elapsed_time = time.time() - start_time
-        # If we have run out of time or current move reaches a terminal state 
-        if elapsed_time >= allowed_time or max_value == float('inf'):
-            break
-    
+    # Problem, recursive stack also takes up memory, so i guess we are stuck with manually limiting the depth ....
+    max_value = minimax(
+        node=root_node, 
+        alpha=float('-inf'), 
+        beta=float('inf'), 
+        is_max=True, 
+        explore_depth=depth,
+        start_time=start_time,
+        allowed_time=allowed_time
+    )
+    elapsed_time = time.time() - start_time
     leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0
+
 
     # Look for children with that maximum value
     for child in root_node.children:
         if child.value == max_value:
             return child, leftover_time
     
-
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
 
     if explore_depth == 0:
