@@ -36,7 +36,7 @@ class MiniMaxNode:
 def get_minimax_action(
     root_node: MiniMaxNode,
     allowed_time: float
-) -> tuple[MiniMaxNode, float]:
+) -> tuple[int, float]:
 
     # Start timer 
     start_time = time.time()
@@ -46,7 +46,8 @@ def get_minimax_action(
 
     depth = MAX_DEPTH
     num_children = len(root_node.children)
-    if num_children > 300:
+    # Many children and early on in the game 
+    if num_children > 250 and root_node.depth < 20:
         depth = GREEDY_DEPTH
         
     # Perform iterative deepening 
@@ -65,9 +66,11 @@ def get_minimax_action(
 
 
     # Look for children with that maximum value
+    child_index = 0
     for child in root_node.children:
         if child.value == max_value:
-            return child, leftover_time
+            return child_index, leftover_time
+        child_index += 1
     
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
 

@@ -23,7 +23,7 @@ class Agent:
         self.total_moves: int = 1
         self.board = np.zeros((11, 11), dtype=int)
         # Storing the tree so that we don't create the children that we have already created
-        self.tree: MiniMaxNode = MiniMaxNode(color=BLUE if color == PlayerColor.RED else RED, state=self.board, depth=0, root_colour=self.color_int)
+        self.tree: MiniMaxNode = None
         self.allowed_time: float = MAX_TIME
 
     def action(self, **referee: dict) -> Action:
@@ -37,30 +37,18 @@ class Agent:
             return get_random_initial_action(self.board, opponent_color, False)
         
         # Moves from step 3 onwards are all minimax-generated        
-        else:
-            if self.tree and self.tree.children:
-                # Convert board to hash and see if we have already generated it
-                board_to_string = np.array2string(self.board)
-                # Convert each child board to hash and compare with current board state
-                for child in self.tree.children:
-                    child_board_to_string = np.array2string(child.state)
-                    # If found, this means we have a whole tree already generated (don't need to create a new one)
-                    if board_to_string == child_board_to_string:
-                        self.tree = child
-                        break
-            else:
-                self.tree = generate_node(self)
-            
-            self.tree, leftover_time = get_minimax_action(self.tree, self.allowed_time)  
+        else:            
+            child_index, leftover_time = get_minimax_action(self.tree, self.allowed_time)  
             self.allowed_time = MAX_TIME + leftover_time          
             
-            return convert_to_place_action(self.tree.parent_action)
+            return convert_to_place_action(self.tree.children[child_index].parent_action)
 
 
     def update(self, color: PlayerColor, action: Action, **referee: dict):
 
         place_action: PlaceAction = action
         self.total_moves += 1
+        # Update board state 
         self.board = apply_move(
             board=self.board, 
             color=color, 
@@ -69,9 +57,31 @@ class Agent:
             color_as_int=None,
             make_copy=False
         )
+        # Update state of tree (nothing needs to be done for first 2 moves since no children is generated)
+        if self.total_moves < 3:
+            return 
+        
+        matching_child = None
+        if self.tree and self.tree.children:
+            # Convert board to hash and see if we have already generated it
+            current_board_hash = self.board.data.tobytes()
+
+            # Convert each child board to hash and compare with current board state
+            for child in self.tree.children:
+                child_board_hash = child.state.data.tobytes()
+                # If found, this means we have a whole tree already generated (don't need to create a new one)
+                if child_board_hash == current_board_hash:
+                    matching_child = child
+                    break
+        
+        if matching_child:
+            self.tree = matching_child
+        else:
+            self.tree = generate_node(self)
 
 
 def generate_node(agent: Agent) -> MiniMaxNode:
+    print("how many times is this called....")
     # initialise root node
     root_player = agent.color_int
     opponent_player = BLUE if agent.color_int == RED else RED
