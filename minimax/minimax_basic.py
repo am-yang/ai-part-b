@@ -1,5 +1,6 @@
-from .moves import MAX_DEPTH, RED , BLUE, possible_actions, is_terminal_state, count_tiles
+from .moves import MAX_DEPTH, RED , BLUE, possible_actions, is_terminal_state, count_tiles, convert_to_place_action
 import numpy as np
+from referee.game import PlaceAction, PlayerColor
 import time
 import tracemalloc
 import os
@@ -34,21 +35,33 @@ class MiniMaxNode:
 
 
 def get_minimax_action(
-    root_node: MiniMaxNode,
+    state: np.ndarray,
+    depth: int, 
+    current_player: PlayerColor,
     allowed_time: float
-) -> tuple[int, float]:
+) -> tuple[PlaceAction, float]:
 
     # Start timer 
     start_time = time.time()
-    
-    if root_node.children is None:
-        root_node.children = init_children(root_node)
 
-    depth = MAX_DEPTH
+    # initialise root node
+    root_player = RED if current_player == PlayerColor.RED else BLUE
+    opponent_player = BLUE if current_player == PlayerColor.RED else RED
+    root_depth = depth - 1
+    root_node = MiniMaxNode(
+        color=opponent_player, 
+        state=state, 
+        depth=root_depth, 
+        root_colour=root_player
+    )
+
+    root_node.children = init_children(root_node)
+
+    explore_depth = MAX_DEPTH
     num_children = len(root_node.children)
     # Many children and early on in the game 
     if num_children > 250 and root_node.depth < 20:
-        depth = GREEDY_DEPTH
+        explore_depth = GREEDY_DEPTH
         
     # Perform iterative deepening 
     # Problem, recursive stack also takes up memory, so i guess we are stuck with manually limiting the depth ....
@@ -57,7 +70,7 @@ def get_minimax_action(
         alpha=float('-inf'), 
         beta=float('inf'), 
         is_max=True, 
-        explore_depth=depth,
+        explore_depth=explore_depth,
         start_time=start_time,
         allowed_time=allowed_time
     )
@@ -66,11 +79,9 @@ def get_minimax_action(
 
 
     # Look for children with that maximum value
-    child_index = 0
     for child in root_node.children:
         if child.value == max_value:
-            return child_index, leftover_time
-        child_index += 1
+            return convert_to_place_action(child.parent_action), leftover_time
     
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
 
