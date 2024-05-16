@@ -57,7 +57,6 @@ class Agent:
 
 
 def generate_node(agent: Agent) -> MiniMaxNode:
-    print("how many times is this called....")
     # initialise root node
     root_player = agent.color_int
     opponent_player = BLUE if agent.color_int == RED else RED

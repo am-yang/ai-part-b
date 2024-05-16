@@ -7,7 +7,6 @@ import os
 import linecache
 
 MAX_TIME = 2.4
-MAX_TRAVERSAL_DEPTH = 4
 GREEDY_DEPTH = 1
 
 class MiniMaxNode:
@@ -57,31 +56,37 @@ def get_minimax_action(
 
     root_node.children = init_children(root_node)
 
-    explore_depth = MAX_DEPTH
+    explore_depth = MAX_DEPTH + 1
     num_children = len(root_node.children)
     # Many children and early on in the game 
-    if num_children > 250 and root_node.depth < 20:
-        explore_depth = GREEDY_DEPTH
+    if num_children > 300 and root_node.depth < 20:
+        explore_depth = GREEDY_DEPTH + 1
         
     # Perform iterative deepening 
     # Problem, recursive stack also takes up memory, so i guess we are stuck with manually limiting the depth ....
-    max_value = minimax(
-        node=root_node, 
-        alpha=float('-inf'), 
-        beta=float('inf'), 
-        is_max=True, 
-        explore_depth=explore_depth,
-        start_time=start_time,
-        allowed_time=allowed_time
-    )
-    elapsed_time = time.time() - start_time
-    leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0
+    # or not.......
+    for curr_depth in range(1, explore_depth):
+        max_value = minimax(
+            node=root_node, 
+            alpha=float('-inf'), 
+            beta=float('inf'), 
+            is_max=True, 
+            explore_depth=curr_depth,
+            start_time=start_time,
+            allowed_time=allowed_time
+        )
+        elapsed_time = time.time() - start_time
+        # Exit traversal if time limit exceeds, or if we reach a terminal state 
+        if elapsed_time >= allowed_time or max_value == float('-inf') or max_value == float('inf'):
+            break
 
+    leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0
 
     # Look for children with that maximum value
     for child in root_node.children:
         if child.value == max_value:
             return convert_to_place_action(child.parent_action), leftover_time
+    
     
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
 
