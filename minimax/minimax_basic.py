@@ -1,4 +1,4 @@
-from .moves import MAX_DEPTH, RED , BLUE, possible_actions, is_terminal_state, count_tiles, convert_to_place_action
+from .moves import MAX_DEPTH, RED, BLUE, possible_actions, is_terminal_state, count_tiles, convert_to_place_action
 import numpy as np
 from referee.game import PlaceAction, PlayerColor
 import time
@@ -7,7 +7,6 @@ MAX_TIME = 2.4
 GREEDY_DEPTH = 1
 
 class MiniMaxNode:
-
     def __init__(
         self, 
         color: int, 
@@ -15,13 +14,13 @@ class MiniMaxNode:
         depth: int, 
         root_colour: int, 
         parent=None, 
-        parent_action: list[tuple[int, int]]=None,
+        parent_action: list[tuple[int, int]] = None,
         weight: int = 0
     ):
         self.color: int = color
         self.state: np.ndarray = state
         self.parent: MiniMaxNode = parent
-        self.parent_action: list[tuple[int, int]] = parent_action # action that led to this state
+        self.parent_action: list[tuple[int, int]] = parent_action  # action that led to this state
         self.children: list[MiniMaxNode] = None
         self.depth: int = depth
         self.value: int = 0
@@ -29,6 +28,13 @@ class MiniMaxNode:
         self.weight = weight
         return
 
+# Counters for nodes evaluated and pruned per action
+nodes_evaluated = 0
+nodes_pruned = 0
+
+# Global counters for total nodes evaluated and pruned
+total_nodes_evaluated = 0
+total_nodes_pruned = 0
 
 def get_minimax_action(
     state: np.ndarray,
@@ -36,11 +42,14 @@ def get_minimax_action(
     current_player: PlayerColor,
     allowed_time: float
 ) -> tuple[PlaceAction, float]:
+    global nodes_evaluated, nodes_pruned, total_nodes_evaluated, total_nodes_pruned
+    nodes_evaluated = 0
+    nodes_pruned = 0
 
-    # Start timer 
+    # Start timer
     start_time = time.time()
 
-    # initialise root node
+    # Initialise root node
     root_player = RED if current_player == PlayerColor.RED else BLUE
     opponent_player = BLUE if current_player == PlayerColor.RED else RED
     root_depth = depth - 1
@@ -55,13 +64,11 @@ def get_minimax_action(
 
     explore_depth = MAX_DEPTH + 1
     num_children = len(root_node.children)
-    # Many children and early on in the game 
+    # Many children and early on in the game
     if num_children > 300 and root_node.depth < 20:
         explore_depth = GREEDY_DEPTH + 1
-        
-    # Perform iterative deepening 
-    # Problem, recursive stack also takes up memory, so i guess we are stuck with manually limiting the depth ....
-    # or not.......
+
+    # Perform iterative deepening
     for curr_depth in range(1, explore_depth):
         max_value = minimax(
             node=root_node, 
@@ -73,23 +80,31 @@ def get_minimax_action(
             allowed_time=allowed_time
         )
         elapsed_time = time.time() - start_time
-        # Exit traversal if time limit exceeds, or if we reach a terminal state 
+        # Exit traversal if time limit exceeds, or if we reach a terminal state
         if elapsed_time >= allowed_time or max_value == float('-inf') or max_value == float('inf'):
             break
 
     leftover_time = allowed_time - elapsed_time if elapsed_time < allowed_time else 0
 
+    # Update global counters
+    total_nodes_evaluated += nodes_evaluated
+    total_nodes_pruned += nodes_pruned
+
     # Look for children with that maximum value
     for child in root_node.children:
         if child.value == max_value:
+            # print(f"Nodes evaluated this round: {nodes_evaluated}, Nodes pruned this round: {nodes_pruned}")
+            # print(f"Total nodes evaluated: {total_nodes_evaluated}, Total nodes pruned: {total_nodes_pruned}")
             return convert_to_place_action(child.parent_action), leftover_time
-    
-    
+
 def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_depth: int, start_time: float, allowed_time: float):
+    global nodes_evaluated, nodes_pruned
+
+    nodes_evaluated += 1
 
     if explore_depth == 0:
         return node.weight
-    
+
     if is_terminal_state(board=node.state, depth=node.depth, color=node.color):
         if node.depth == MAX_DEPTH:
             count_root = count_tiles(node.state, node.root_colour)
@@ -99,27 +114,28 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
                 return float('inf')
             else:
                 return float('-inf')
-            
-        # Check if our player was the one that made the last move 
+
+        # Check if our player was the one that made the last move
         if node.root_colour == node.color:
             return float('inf')
-        
+
         return float('-inf')
-    
+
     if is_max:
         max_eval = float('-inf')
-        
-        # If we have no yet generated its children, do so now
+
+        # If we have not yet generated its children, do so now
         if node.children is None:
             node.children = init_children(node)
-            
+
         for child in node.children:
             child.value = minimax(child, alpha, beta, False, explore_depth - 1, start_time, allowed_time)
             max_eval = max(max_eval, child.value)
             alpha = max(alpha, child.value)
             elapsed_time = time.time() - start_time
             if beta <= alpha or elapsed_time >= allowed_time:
-                break 
+                nodes_pruned += 1
+                break
         node.value = max_eval
         return max_eval
 
@@ -134,14 +150,13 @@ def minimax(node: MiniMaxNode, alpha: int, beta: int, is_max: bool, explore_dept
             beta = min(beta, child.value)
             elapsed_time = time.time() - start_time
             if beta <= alpha or elapsed_time >= allowed_time:
+                nodes_pruned += 1
                 break
-        
+
         node.value = min_eval
         return min_eval
 
-
 def init_children(node: MiniMaxNode):
-
     children: list[MiniMaxNode] = []
     child_depth: int = node.depth + 1
     child_player: int = BLUE if node.color == RED else RED
