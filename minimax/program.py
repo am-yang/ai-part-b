@@ -3,20 +3,15 @@
 
 from referee.game import PlayerColor, Action, PlaceAction
 from .moves import apply_move, get_random_initial_action, RED, BLUE
-from .minimax_basic import get_minimax_action, MiniMaxNode, MAX_TIME
+from .minimax import get_minimax_action, MAX_TIME
 import numpy as np
 
 
 class Agent:
-    """
-    This class is the "entry point" for your agent, providing an interface to
-    respond to various Tetress game events.
-    """
 
     def __init__(self, color: PlayerColor, **referee: dict):
         """
         This constructor method runs when the referee instantiates the agent.
-        Any setup and/or precomputation should be done here.
         """
         self._color = color
         self.color_int = RED if color == PlayerColor.RED else BLUE
@@ -27,7 +22,7 @@ class Agent:
     def action(self, **referee: dict) -> Action:
         """
         This method is called by the referee each time it is the agent's turn
-        to take an action. It must always return an action object. 
+        to take an action. It always returns an action object. 
         """
         if self.total_moves == 1:
             return get_random_initial_action(self.board)

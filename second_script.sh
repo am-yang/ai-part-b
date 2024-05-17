@@ -1,6 +1,6 @@
 #!/bin/bash
 
-output_file="out/old_ver_tests/agent_test7.txt"
+output_file="out/new_ver_tests/agent_test4.txt"
 
 for i in {1..100}
 do

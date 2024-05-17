@@ -1,10 +1,9 @@
 import numpy as np
-from random import choice, randint
+from random import randint
 from referee.game import PlaceAction, PlayerColor
 from referee.game.coord import Coord
 
 
-# Initialise board
 TETROMINOES: list[list[tuple[int, int]]] = [
         # I shape
         [(0,0), (0,1), (0,2), (0,3)],[(0,-1), (0,0), (0,1), (0,2)], [(0,-2), (0,-1), (0,0), (0,1)], [(0,-3), (0,-2), (0,-1), (0,0)],
@@ -63,15 +62,7 @@ MAX_DEPTH = 150
 RED = 1
 BLUE = 2
 VACANT = 0
-TOO_LARGE_BRANCHING_FACTOR = 100
 
-reached_opponent = False
-
-def get_remaining_empty_tiles(
-    opponent_tiles: list[tuple[int, int]]
-) -> list[tuple[int, int]]:
-    
-    return [(row, col) for row in range(BOARD_DIMENSION) for col in range(BOARD_DIMENSION) if (row, col) not in opponent_tiles]
 
 def count_tiles(
     board: np.ndarray, 
@@ -125,8 +116,7 @@ def rank_child(
     #1: Number of player tiles 
     #2: Number of empty cells that are adjacent to player action
 
-    Returns weight and board state
-    (multiplied by -1 since we want to prioritise the maximal values, i.e., maximum player tile, maximum free adjacent tiles)
+    Returns weight and board state (multiplied by -1 since we rank in ascending order)
     '''
 
     count_player_tiles = 0
@@ -186,6 +176,10 @@ def apply_move(
     color_as_int: int = 0,
     make_copy: bool = True
 ) -> np.ndarray:
+
+    '''
+    Function that applies tetromino to board (accounts for col/row clearing)
+    '''
 
     board_ref = np.copy(board) if make_copy else board
     
@@ -307,7 +301,6 @@ def adjacent_to_opponent(
     action: list[tuple[int, int]], 
     opponent_color: int
 ) -> bool:
-    empty_cells: list[tuple[int, int]] = []
     for cell in action:
         for position in ADJACENT:
             row, col = get_cell_coords(cell[0] + position[0], cell[1] + position[1])
