@@ -1,4 +1,4 @@
-from minimax.program import Agent, generate_node
+from minimax.program import Agent
 from minimax.minimax_basic import init_children
 from minimax.moves import get_random_initial_action, possible_actions, RED, BLUE
 from referee.game import PlayerColor

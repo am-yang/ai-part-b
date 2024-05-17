@@ -2,9 +2,6 @@ from .moves import MAX_DEPTH, RED , BLUE, possible_actions, is_terminal_state, c
 import numpy as np
 from referee.game import PlaceAction, PlayerColor
 import time
-import tracemalloc
-import os
-import linecache
 
 MAX_TIME = 2.4
 GREEDY_DEPTH = 1

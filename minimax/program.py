@@ -53,18 +53,3 @@ class Agent:
             place_action_list=None, 
             color_as_int=None
         )
-
-
-
-def generate_node(agent: Agent) -> MiniMaxNode:
-    # initialise root node
-    root_player = agent.color_int
-    opponent_player = BLUE if agent.color_int == RED else RED
-    root_depth = agent.total_moves - 1
-    root_node = MiniMaxNode(
-        color=opponent_player, 
-        state=agent.board, 
-        depth=root_depth, 
-        root_colour=root_player
-    )
-    return root_node
